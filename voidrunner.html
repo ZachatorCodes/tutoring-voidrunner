@@ -1,0 +1,2515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>VOIDRUNNER — endless parkour</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --void: #120a24; /* deep twilight */
+        --void-2: #1d1140;
+        --cyan: #33e1ff;
+        --magenta: #ff4fd8;
+        --amber: #ffc24b;
+        --ink: #e9e4ff;
+        --dim: #9a8fc7;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        background: #0a0618;
+        overscroll-behavior: none;
+      }
+      body {
+        font-family: "Chakra Petch", system-ui, sans-serif;
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      canvas {
+        display: block;
+        touch-action: none;
+      }
+
+      /* ---------- shared overlay ---------- */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        padding: 24px;
+        text-align: center;
+        background: radial-gradient(
+          120% 90% at 50% 40%,
+          rgba(18, 10, 36, 0.35),
+          rgba(10, 6, 24, 0.86) 70%
+        );
+        backdrop-filter: blur(2px);
+      }
+      .overlay.hidden {
+        display: none;
+      }
+
+      .eyebrow {
+        font-family: "Space Mono", monospace;
+        font-size: 12px;
+        letter-spacing: 0.42em;
+        text-transform: uppercase;
+        color: var(--cyan);
+        margin-bottom: 14px;
+        text-shadow: 0 0 18px rgba(51, 225, 255, 0.6);
+      }
+      .title {
+        font-weight: 700;
+        line-height: 0.92;
+        letter-spacing: 0.02em;
+        font-size: clamp(48px, 11vw, 128px);
+        background: linear-gradient(
+          170deg,
+          #fff 0%,
+          var(--cyan) 45%,
+          var(--magenta) 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 8px 40px rgba(255, 79, 216, 0.35));
+      }
+      .tagline {
+        color: var(--dim);
+        max-width: 34ch;
+        margin: 18px auto 0;
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      .btn {
+        font-family: "Chakra Petch", sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        font-size: 15px;
+        color: var(--void);
+        background: var(--cyan);
+        border: none;
+        border-radius: 2px;
+        padding: 16px 34px;
+        margin-top: 30px;
+        cursor: pointer;
+        box-shadow:
+          0 0 0 1px rgba(51, 225, 255, 0.4),
+          0 10px 40px rgba(51, 225, 255, 0.35);
+        transition:
+          transform 0.12s ease,
+          box-shadow 0.2s ease,
+          background 0.2s ease;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          0 0 0 1px rgba(51, 225, 255, 0.6),
+          0 16px 50px rgba(51, 225, 255, 0.5);
+      }
+      .btn:active {
+        transform: translateY(0);
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--cyan);
+        box-shadow: inset 0 0 0 1px rgba(51, 225, 255, 0.5);
+      }
+      .btn.ghost:hover {
+        background: rgba(51, 225, 255, 0.08);
+      }
+
+      .controls {
+        margin-top: 34px;
+        font-family: "Space Mono", monospace;
+        font-size: 12.5px;
+        color: var(--dim);
+        display: flex;
+        gap: 22px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .controls b {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      /* ---------- HUD ---------- */
+      #hud {
+        position: fixed;
+        inset: 0;
+        z-index: 5;
+        pointer-events: none;
+        display: none;
+      }
+      #hud.on {
+        display: block;
+      }
+      .hud-tl {
+        position: absolute;
+        top: 22px;
+        left: 24px;
+      }
+      .hud-label {
+        font-family: "Space Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.3em;
+        color: var(--dim);
+        text-transform: uppercase;
+      }
+      .hud-dist {
+        font-weight: 700;
+        font-size: 54px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        text-shadow: 0 0 24px rgba(51, 225, 255, 0.45);
+      }
+      .hud-dist .u {
+        font-size: 20px;
+        color: var(--cyan);
+        margin-left: 6px;
+      }
+      .hud-mood {
+        font-family: "Space Mono", monospace;
+        font-size: 12px;
+        letter-spacing: 0.28em;
+        color: var(--magenta);
+        margin-top: 8px;
+        text-transform: uppercase;
+        text-shadow: 0 0 14px rgba(255, 79, 216, 0.5);
+      }
+      .hud-tr {
+        position: absolute;
+        top: 22px;
+        right: 24px;
+        text-align: right;
+      }
+      .hud-shards {
+        font-weight: 700;
+        font-size: 26px;
+        color: var(--amber);
+        text-shadow: 0 0 18px rgba(255, 194, 75, 0.5);
+      }
+      .hud-best {
+        font-family: "Space Mono", monospace;
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 6px;
+      }
+
+      .hud-bl {
+        position: absolute;
+        left: 24px;
+        bottom: 24px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+      }
+      .pip {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 2px var(--cyan);
+        transition:
+          background 0.12s,
+          opacity 0.12s;
+      }
+      .pip.full {
+        background: var(--cyan);
+        box-shadow:
+          0 0 14px rgba(51, 225, 255, 0.8),
+          inset 0 0 0 2px var(--cyan);
+      }
+      .dash {
+        margin-left: 12px;
+        font-family: "Space Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        color: var(--dim);
+        text-transform: uppercase;
+      }
+      .dash.ready {
+        color: var(--magenta);
+        text-shadow: 0 0 14px rgba(255, 79, 216, 0.6);
+      }
+
+      #crosshair {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 5;
+        display: none;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--ink);
+        opacity: 0.85;
+        box-shadow:
+          0 0 0 1px rgba(0, 0, 0, 0.4),
+          0 0 10px rgba(51, 225, 255, 0.6);
+      }
+      #crosshair.on {
+        display: block;
+      }
+
+      .speedlines {
+        position: fixed;
+        inset: 0;
+        z-index: 4;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s;
+        background: radial-gradient(
+          140% 90% at 50% 50%,
+          transparent 55%,
+          rgba(255, 79, 216, 0.16) 100%
+        );
+      }
+
+      /* ---------- shop ---------- */
+      .panel {
+        width: min(720px, 94vw);
+        background: linear-gradient(
+          180deg,
+          rgba(29, 17, 64, 0.92),
+          rgba(18, 10, 36, 0.94)
+        );
+        border: 1px solid rgba(51, 225, 255, 0.22);
+        border-radius: 8px;
+        padding: 30px 30px 26px;
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+      }
+      .panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 6px;
+      }
+      .panel-head h2 {
+        font-weight: 700;
+        font-size: 26px;
+        letter-spacing: 0.04em;
+      }
+      .bank {
+        font-weight: 700;
+        color: var(--amber);
+        font-size: 22px;
+        text-shadow: 0 0 16px rgba(255, 194, 75, 0.5);
+      }
+      .run-summary {
+        font-family: "Space Mono", monospace;
+        font-size: 12.5px;
+        color: var(--dim);
+        margin-bottom: 20px;
+      }
+      .run-summary b {
+        color: var(--cyan);
+      }
+      .shop-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      @media (max-width: 560px) {
+        .shop-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .up {
+        text-align: left;
+        background: rgba(10, 6, 24, 0.5);
+        border: 1px solid rgba(154, 143, 199, 0.18);
+        border-radius: 6px;
+        padding: 14px 15px;
+        cursor: pointer;
+        pointer-events: auto;
+        transition:
+          border-color 0.15s,
+          transform 0.1s,
+          background 0.15s;
+      }
+      .up:hover:not(.maxed):not(.locked) {
+        border-color: var(--cyan);
+        transform: translateY(-2px);
+        background: rgba(51, 225, 255, 0.06);
+      }
+      .up.maxed {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .up.locked {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+      .up-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .up-name {
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: 0.02em;
+      }
+      .up-cost {
+        font-family: "Space Mono", monospace;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--amber);
+      }
+      .up-cost.cant {
+        color: #7a6f8f;
+      }
+      .up-desc {
+        font-size: 12.5px;
+        color: var(--dim);
+        line-height: 1.4;
+        margin-bottom: 9px;
+      }
+      .up-bar {
+        display: flex;
+        gap: 4px;
+      }
+      .seg {
+        height: 5px;
+        flex: 1;
+        border-radius: 3px;
+        background: rgba(154, 143, 199, 0.2);
+      }
+      .seg.on {
+        background: linear-gradient(90deg, var(--cyan), var(--magenta));
+        box-shadow: 0 0 8px rgba(51, 225, 255, 0.5);
+      }
+      .shop-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 22px;
+      }
+      .note {
+        font-family: "Space Mono", monospace;
+        font-size: 11px;
+        color: var(--dim);
+        margin-top: 16px;
+        text-align: center;
+      }
+
+      .shop-sub {
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 0.06em;
+        margin: 20px 0 10px;
+        color: var(--ink);
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .sub-hint {
+        font-family: "Space Mono", monospace;
+        font-size: 10.5px;
+        font-weight: 400;
+        letter-spacing: 0;
+        color: var(--dim);
+        text-transform: none;
+      }
+      .swatches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .swatch {
+        width: 46px;
+        height: 46px;
+        border-radius: 9px;
+        background: var(--c);
+        cursor: pointer;
+        position: relative;
+        border: 2px solid transparent;
+        box-shadow: 0 0 14px -2px var(--c);
+        pointer-events: auto;
+        transition:
+          transform 0.1s,
+          border-color 0.12s;
+      }
+      .swatch:hover {
+        transform: translateY(-2px);
+      }
+      .swatch.sel {
+        border-color: #fff;
+        box-shadow:
+          0 0 0 2px #fff,
+          0 0 18px var(--c);
+      }
+      .swatch.locked {
+        filter: grayscale(0.55) brightness(0.55);
+      }
+      .swatch.locked.afford {
+        filter: grayscale(0.2) brightness(0.8);
+      }
+      .swatch .price {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Space Mono", monospace;
+        font-size: 10px;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+
+      /* HUD power-up tray */
+      #powerups {
+        position: absolute;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 14px;
+      }
+      .pu {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        opacity: 0.95;
+      }
+      .pu-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        background: rgba(10, 6, 24, 0.5);
+        border: 1.5px solid var(--c);
+        box-shadow: 0 0 12px -2px var(--c);
+      }
+      .pu-lives {
+        display: flex;
+        gap: 3px;
+      }
+      .pu-life {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--c);
+        box-shadow: 0 0 6px var(--c);
+      }
+      .pu-life.spent {
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: none;
+      }
+
+      /* screen effects */
+      #slowvig {
+        position: fixed;
+        inset: 0;
+        z-index: 4;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        background: radial-gradient(
+          120% 90% at 50% 50%,
+          transparent 45%,
+          rgba(120, 90, 255, 0.28) 100%
+        );
+      }
+      #flash {
+        position: fixed;
+        inset: 0;
+        z-index: 8;
+        pointer-events: none;
+        opacity: 0;
+        background: #fff;
+      }
+      #toast {
+        position: fixed;
+        left: 50%;
+        top: 30%;
+        transform: translate(-50%, -50%);
+        z-index: 9;
+        pointer-events: none;
+        font-family: "Chakra Petch", sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        font-size: 20px;
+        text-transform: uppercase;
+        opacity: 0;
+        text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+      }
+
+      /* ---------- touch controls ---------- */
+      #touchControls {
+        position: fixed;
+        inset: 0;
+        z-index: 6;
+        display: none;
+      }
+      #touchControls.on {
+        display: block;
+      }
+      #joyZone {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 50%;
+        height: 100%;
+        touch-action: none;
+      }
+      #lookZone {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 50%;
+        height: 100%;
+        touch-action: none;
+      }
+      #joyBase {
+        position: absolute;
+        width: 118px;
+        height: 118px;
+        margin: -59px 0 0 -59px;
+        border-radius: 50%;
+        border: 2px solid rgba(51, 225, 255, 0.4);
+        background: rgba(51, 225, 255, 0.06);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.12s;
+      }
+      #joyKnob {
+        position: absolute;
+        width: 52px;
+        height: 52px;
+        margin: -26px 0 0 -26px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #7af0ff, #1aa6c8);
+        opacity: 0;
+        pointer-events: none;
+        box-shadow: 0 0 18px rgba(51, 225, 255, 0.7);
+        transition: opacity 0.12s;
+      }
+      .tbtn {
+        position: absolute;
+        right: max(28px, env(safe-area-inset-right));
+        width: 92px;
+        height: 92px;
+        border-radius: 50%;
+        font-family: "Chakra Petch", sans-serif;
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: 0.12em;
+        color: var(--ink);
+        background: rgba(29, 17, 64, 0.55);
+        border: 1.5px solid rgba(154, 143, 199, 0.5);
+        pointer-events: auto;
+        touch-action: none;
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          transform 0.08s,
+          background 0.08s;
+      }
+      #btnJump {
+        bottom: max(40px, env(safe-area-inset-bottom));
+      }
+      #btnJump.primary {
+        border-color: rgba(51, 225, 255, 0.8);
+        box-shadow: 0 0 22px rgba(51, 225, 255, 0.3);
+        color: #bfefff;
+      }
+      #btnDash {
+        bottom: calc(150px + env(safe-area-inset-bottom));
+        border-color: rgba(255, 79, 216, 0.7);
+        color: #ffc7f1;
+      }
+      .tbtn.hit {
+        transform: scale(0.9);
+        background: rgba(51, 225, 255, 0.28);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- speed vignette -->
+    <div class="speedlines" id="speedlines"></div>
+
+    <!-- crosshair -->
+    <div id="crosshair"></div>
+
+    <!-- on-screen touch controls -->
+    <div id="touchControls">
+      <div id="joyZone"></div>
+      <div id="lookZone"></div>
+      <div id="joyBase"></div>
+      <div id="joyKnob"></div>
+      <button id="btnDash" class="tbtn">DASH</button>
+      <button id="btnJump" class="tbtn primary">JUMP</button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-tl">
+        <div class="hud-label">Distance</div>
+        <div class="hud-dist">
+          <span id="hud-distance">0</span><span class="u">m</span>
+        </div>
+        <div class="hud-mood" id="hud-mood">—</div>
+      </div>
+      <div class="hud-tr">
+        <div class="hud-label">Shards</div>
+        <div class="hud-shards" id="hud-shards">0</div>
+        <div class="hud-best" id="hud-best">BEST 0m</div>
+      </div>
+      <div class="hud-bl">
+        <div id="pips"></div>
+        <div class="dash" id="dash-ind">DASH —</div>
+      </div>
+      <div id="powerups"></div>
+    </div>
+
+    <!-- screen effects -->
+    <div id="slowvig"></div>
+    <div id="flash"></div>
+    <div id="toast"></div>
+
+    <!-- MENU -->
+    <div class="overlay" id="menu">
+      <div class="eyebrow">First-person · endless · permadeath</div>
+      <div class="title">VOIDRUNNER</div>
+      <div class="tagline">
+        Sprint the shattered skyway. Every gap is a guess, every fall is final.
+        Bank your shards, upgrade, and run again — farther.
+      </div>
+      <button class="btn" id="play-btn">Click to run</button>
+      <div class="controls">
+        <span><b>WASD</b> move</span>
+        <span><b>MOUSE</b> look</span>
+        <span><b>SPACE</b> jump</span>
+        <span><b>SHIFT</b> dash</span>
+        <span><b>ESC</b> release cursor</span>
+      </div>
+      <div class="controls" style="margin-top: 12px">
+        <span>run alongside a <b>wall</b> to wall-run</span>
+        <span><b>pink pads</b> bounce you skyward</span>
+        <span>run up <b>ramps</b> &amp; towers</span>
+      </div>
+    </div>
+
+    <!-- DEATH / SHOP -->
+    <div class="overlay hidden" id="shop">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="shop-title">YOU FELL</h2>
+          <div class="bank">◆ <span id="bank">0</span></div>
+        </div>
+        <div class="run-summary" id="run-summary">
+          Reached <b>0m</b> · collected <b>0</b> shards
+        </div>
+        <div class="shop-grid" id="shop-grid"></div>
+        <div class="shop-sub">
+          Power-ups
+          <span class="sub-hint"
+            >5 lives each · lose 1 per death · re-buy or collect to refill</span
+          >
+        </div>
+        <div class="shop-grid" id="pu-grid"></div>
+        <div class="shop-sub">
+          Arm Color
+          <span class="sub-hint">buy with shards · tap owned to equip</span>
+        </div>
+        <div class="swatches" id="arm-swatches"></div>
+        <div class="shop-actions">
+          <button class="btn" id="run-again">Run again</button>
+        </div>
+        <div class="note">
+          Upgrades are permanent. Shards persist between runs.
+        </div>
+      </div>
+    </div>
+
+    <!-- paused hint -->
+    <div class="overlay hidden" id="paused">
+      <div class="eyebrow">Paused</div>
+      <div class="title" style="font-size: clamp(36px, 7vw, 72px)">
+        CURSOR FREE
+      </div>
+      <button class="btn" id="resume-btn">Click to resume</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      /* ============================================================
+   VOIDRUNNER — first-person endless parkour roguelike
+   Three.js r128 · single file
+   ============================================================ */
+
+      // ---------- persistent meta-progression ----------
+      const SAVE_KEY = "voidrunner:meta:v1";
+      const META_DEFAULT = {
+        bank: 0,
+        best: 0,
+        up: { speed: 0, jump: 0, jumps: 0, dash: 0, magnet: 0, slow: 0 },
+        armColor: "cyan",
+        armUnlocked: { cyan: true },
+        powerups: { shield: 0, slowmo: 0, magnet: 0, xjump: 0 }, // lives remaining, 0..5
+      };
+      let META = JSON.parse(JSON.stringify(META_DEFAULT));
+
+      async function loadMeta() {
+        try {
+          if (window.storage) {
+            const r = await window.storage.get(SAVE_KEY, false);
+            if (r && r.value) {
+              META = Object.assign(
+                JSON.parse(JSON.stringify(META_DEFAULT)),
+                JSON.parse(r.value),
+              );
+              META.up = Object.assign({}, META_DEFAULT.up, META.up || {});
+              META.armUnlocked = Object.assign(
+                {},
+                META_DEFAULT.armUnlocked,
+                META.armUnlocked || {},
+              );
+              META.powerups = Object.assign(
+                {},
+                META_DEFAULT.powerups,
+                META.powerups || {},
+              );
+              if (!META.armColor) META.armColor = "cyan";
+            }
+          }
+        } catch (e) {
+          /* session-only fallback */
+        }
+      }
+      async function saveMeta() {
+        try {
+          if (window.storage) {
+            await window.storage.set(SAVE_KEY, JSON.stringify(META), false);
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      }
+
+      // ---------- upgrade definitions ----------
+      // effect() returns the modifier; cost grows per level.
+      const UPGRADES = [
+        {
+          id: "speed",
+          name: "Run Speed",
+          max: 4,
+          baseCost: 40,
+          step: 35,
+          desc: "Move faster. Carry more momentum into every jump.",
+        },
+        {
+          id: "jump",
+          name: "Jump Power",
+          max: 4,
+          baseCost: 45,
+          step: 40,
+          desc: "Leap higher and clear wider gaps.",
+        },
+        {
+          id: "jumps",
+          name: "Extra Jump",
+          max: 2,
+          baseCost: 120,
+          step: 160,
+          desc: "Gain a mid-air jump. Double, then triple jump.",
+        },
+        {
+          id: "dash",
+          name: "Air Dash",
+          max: 3,
+          baseCost: 90,
+          step: 90,
+          desc: "Unlock a forward dash (SHIFT). Levels cut its cooldown.",
+        },
+        {
+          id: "magnet",
+          name: "Shard Gain",
+          max: 4,
+          baseCost: 50,
+          step: 45,
+          desc: "Earn more shards from pickups and distance.",
+        },
+        {
+          id: "slow",
+          name: "Steady Nerve",
+          max: 3,
+          baseCost: 70,
+          step: 75,
+          desc: "The course ramps up more slowly. Survive deeper.",
+        },
+      ];
+      function costOf(u) {
+        return u.baseCost + u.step * META.up[u.id];
+      }
+
+      // ---------- power-ups (held items with 5 lives each; effects are automatic) ----------
+      const MAX_LIVES = 5;
+      const POWERUPS = [
+        {
+          id: "shield",
+          name: "Shield",
+          color: 0x33e1ff,
+          cost: 90,
+          desc: "Survive one deadly fall each run — you are caught and placed back on solid ground.",
+        },
+        {
+          id: "slowmo",
+          name: "Slow-mo",
+          color: 0xa97bff,
+          cost: 90,
+          desc: "Time slows while you fall, making landings easier to judge.",
+        },
+        {
+          id: "magnet",
+          name: "Shard Magnet",
+          color: 0xffc24b,
+          cost: 80,
+          desc: "Pulls in nearby shards automatically and pays a +25% bonus.",
+        },
+        {
+          id: "xjump",
+          name: "Extra Jump",
+          color: 0x9bff6a,
+          cost: 100,
+          desc: "Grants one extra mid-air jump while held.",
+        },
+      ];
+      function hasPU(id) {
+        return META.powerups[id] > 0;
+      }
+      function grantPU(id) {
+        META.powerups[id] = MAX_LIVES;
+      } // collect/buy refills to full
+
+      // derived player stats from meta upgrades + held power-ups
+      function stats() {
+        const u = META.up;
+        return {
+          moveSpeed: 8.6 + u.speed * 0.95,
+          jumpVel: 10.0 + u.jump * 0.95,
+          maxJumps: 1 + u.jumps + (hasPU("xjump") ? 1 : 0),
+          dashUnlocked: u.dash > 0,
+          dashCooldown: Math.max(1.1, 3.0 - (u.dash - 1) * 0.7), // s
+          shardMult: (1 + u.magnet * 0.3) * (hasPU("magnet") ? 1.25 : 1),
+          rampScale: 1 + u.slow * 0.55, // larger = slower ramp
+        };
+      }
+
+      // ============================================================
+      //  THREE.JS SETUP
+      // ============================================================
+      const app = document.getElementById("app");
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x140a2a);
+      scene.fog = new THREE.Fog(0x140a2a, 24, 94);
+
+      const camera = new THREE.PerspectiveCamera(
+        78,
+        innerWidth / innerHeight,
+        0.1,
+        600,
+      );
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+      app.appendChild(renderer.domElement);
+
+      // lights
+      scene.add(new THREE.HemisphereLight(0x8a6cff, 0x180a30, 0.9));
+      const key = new THREE.DirectionalLight(0xfff0ff, 0.85);
+      key.position.set(-6, 14, -4);
+      scene.add(key);
+      const rim = new THREE.PointLight(0x33e1ff, 0.7, 60);
+      rim.position.set(8, 6, 10);
+      scene.add(rim);
+
+      // decorative far grid floor (the abyss has a faint structure)
+      const grid = new THREE.GridHelper(400, 80, 0x3a2a66, 0x241546);
+      grid.position.y = -26;
+      grid.material.transparent = true;
+      grid.material.opacity = 0.35;
+      scene.add(grid);
+
+      // distant stars
+      (function stars() {
+        const g = new THREE.BufferGeometry();
+        const n = 600,
+          pos = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) {
+          pos[i * 3] = (Math.random() - 0.5) * 500;
+          pos[i * 3 + 1] = Math.random() * 160 - 20;
+          pos[i * 3 + 2] = (Math.random() - 0.5) * 500;
+        }
+        g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        const m = new THREE.PointsMaterial({
+          color: 0xbfa8ff,
+          size: 0.7,
+          transparent: true,
+          opacity: 0.6,
+        });
+        scene.add(new THREE.Points(g, m));
+      })();
+
+      // shared geometries / materials
+      const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+      const platMat = new THREE.MeshStandardMaterial({
+        color: 0x2b1d57,
+        roughness: 0.75,
+        metalness: 0.1,
+        emissive: 0x1a1140,
+        emissiveIntensity: 0.6,
+      });
+      const platMatStart = new THREE.MeshStandardMaterial({
+        color: 0x214a55,
+        roughness: 0.6,
+        metalness: 0.2,
+        emissive: 0x0c3540,
+        emissiveIntensity: 0.8,
+      });
+      const edgeMat = new THREE.LineBasicMaterial({
+        color: 0x33e1ff,
+        transparent: true,
+        opacity: 0.55,
+      });
+      const shardGeo = new THREE.OctahedronGeometry(0.34, 0);
+      const shardMat = new THREE.MeshStandardMaterial({
+        color: 0xffc24b,
+        emissive: 0xff9d2b,
+        emissiveIntensity: 1.2,
+        roughness: 0.3,
+        metalness: 0.4,
+      });
+      // power-up pickup (a glowing ring, distinct from shards)
+      const puGeo = new THREE.TorusGeometry(0.36, 0.13, 10, 20);
+      const puMatCache = {};
+      function puMaterial(hex) {
+        if (!puMatCache[hex])
+          puMatCache[hex] = new THREE.MeshStandardMaterial({
+            color: hex,
+            emissive: hex,
+            emissiveIntensity: 1.0,
+            roughness: 0.3,
+            metalness: 0.5,
+          });
+        return puMatCache[hex];
+      }
+      // extra surface materials
+      const platMatTier = new THREE.MeshStandardMaterial({
+        color: 0x3a2168,
+        roughness: 0.7,
+        metalness: 0.15,
+        emissive: 0x281a52,
+        emissiveIntensity: 0.7,
+      });
+      const platMatBounce = new THREE.MeshStandardMaterial({
+        color: 0xff4fd8,
+        roughness: 0.35,
+        metalness: 0.3,
+        emissive: 0xff2bc0,
+        emissiveIntensity: 1.1,
+      });
+      const rampMat = new THREE.MeshStandardMaterial({
+        color: 0x244a6b,
+        roughness: 0.6,
+        metalness: 0.2,
+        emissive: 0x123247,
+        emissiveIntensity: 0.7,
+      });
+      const pillarMat = new THREE.MeshStandardMaterial({
+        color: 0x1c1238,
+        roughness: 0.85,
+        metalness: 0.1,
+        emissive: 0x130a2a,
+        emissiveIntensity: 0.5,
+      });
+      const wallRunMat = new THREE.MeshStandardMaterial({
+        color: 0x2a2350,
+        roughness: 0.6,
+        metalness: 0.2,
+        emissive: 0x33145a,
+        emissiveIntensity: 0.8,
+      });
+
+      // per-run vertical mood (random each run)
+      const run = { mood: "undulate" };
+      const MOOD_LABEL = {
+        climb: "ASCENT",
+        descend: "DESCENT",
+        undulate: "UNDULATING",
+      };
+
+      // ---------- first-person arm + purchasable colors ----------
+      const ARM_COLORS = [
+        { id: "cyan", name: "Cyan", hex: 0x33e1ff, cost: 0 },
+        { id: "magenta", name: "Magenta", hex: 0xff4fd8, cost: 80 },
+        { id: "amber", name: "Amber", hex: 0xffc24b, cost: 80 },
+        { id: "lime", name: "Lime", hex: 0x9bff6a, cost: 120 },
+        { id: "violet", name: "Violet", hex: 0xa97bff, cost: 120 },
+        { id: "crimson", name: "Crimson", hex: 0xff5a5a, cost: 160 },
+        { id: "mint", name: "Mint", hex: 0x5affc4, cost: 160 },
+        { id: "gold", name: "Gold", hex: 0xffd700, cost: 240 },
+        { id: "bone", name: "Bone", hex: 0xf2eecf, cost: 240 },
+      ];
+      function darken(hex, f) {
+        const r = Math.floor(((hex >> 16) & 255) * f),
+          g = Math.floor(((hex >> 8) & 255) * f),
+          b = Math.floor((hex & 255) * f);
+        return (r << 16) | (g << 8) | b;
+      }
+
+      let armGroup,
+        armMat,
+        handMat,
+        armSwing = 0,
+        armBob = 0;
+      function buildArm() {
+        armGroup = new THREE.Group();
+        armMat = new THREE.MeshStandardMaterial({
+          color: 0x33e1ff,
+          roughness: 0.55,
+          metalness: 0.1,
+          emissive: 0x101a1f,
+          emissiveIntensity: 0.35,
+        });
+        handMat = new THREE.MeshStandardMaterial({
+          color: 0x1aa6c8,
+          roughness: 0.6,
+          metalness: 0.1,
+        });
+        const upper = new THREE.Mesh(
+          new THREE.BoxGeometry(0.34, 0.34, 1.0),
+          armMat,
+        );
+        upper.position.set(0, 0, -0.05);
+        const hand = new THREE.Mesh(
+          new THREE.BoxGeometry(0.4, 0.4, 0.34),
+          handMat,
+        );
+        hand.position.set(0, 0, -0.6);
+        // crisp blocky outline like the world geometry
+        const oA = new THREE.LineSegments(
+          new THREE.EdgesGeometry(upper.geometry),
+          edgeMat,
+        );
+        oA.position.copy(upper.position);
+        const oH = new THREE.LineSegments(
+          new THREE.EdgesGeometry(hand.geometry),
+          edgeMat,
+        );
+        oH.position.copy(hand.position);
+        armGroup.add(upper, hand, oA, oH);
+        armGroup.position.set(0.5, -0.42, -0.72); // bottom-right of view
+        armGroup.rotation.set(0.18, -0.26, 0.3);
+        camera.add(armGroup);
+        scene.add(camera); // so camera's children render
+      }
+      function applyArmColor() {
+        const c =
+          ARM_COLORS.find((a) => a.id === META.armColor) || ARM_COLORS[0];
+        if (armMat) armMat.color.setHex(c.hex);
+        if (handMat) handMat.color.setHex(darken(c.hex, 0.6));
+      }
+      function triggerSwing() {
+        armSwing = 1;
+      } // called on jump & dash
+
+      function updateArm(dt) {
+        if (!armGroup) return;
+        const spd = Math.hypot(player.vx, player.vz);
+        const moving = player.onGround && spd > 1.5;
+        armBob += dt * (moving ? 9 : 3.5);
+        const amp = moving ? 0.032 : 0.008;
+        if (armSwing > 0) armSwing = Math.max(0, armSwing - dt * 4.5);
+        const punch = Math.sin(armSwing * Math.PI); // 0 → 1 → 0 over the swing
+        const bx = Math.cos(armBob) * amp * 0.5;
+        const by = Math.sin(armBob * 2) * amp;
+        armGroup.position.set(
+          0.5 + bx,
+          -0.42 + by - punch * 0.12,
+          -0.72 - punch * 0.18,
+        );
+        armGroup.rotation.set(0.18 + punch * 0.95, -0.26, 0.3 - punch * 0.15);
+      }
+      buildArm();
+
+      // ============================================================
+      //  PLATFORM COURSE (procedural, endless, layered, mood-driven)
+      // ============================================================
+      const platforms = []; // main path + side tiers (top-landable)
+      const ramps = []; // walkable slopes
+      const pillars = []; // towers: wall-run surfaces + scenic depth
+      let lastPlat = null; // tail of the MAIN path only
+
+      function makePlatform(x, y, z, w, d, h, opts) {
+        opts = opts || {};
+        const start = !!opts.start,
+          bounce = !!opts.bounce,
+          tier = opts.tier || "main";
+        const mat = start
+          ? platMatStart
+          : bounce
+          ? platMatBounce
+          : tier === "tier"
+          ? platMatTier
+          : platMat;
+        const mesh = new THREE.Mesh(boxGeo, mat);
+        mesh.scale.set(w, h, d);
+        mesh.position.set(x, y, z);
+        scene.add(mesh);
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(boxGeo),
+          edgeMat,
+        );
+        edges.scale.set(w, h, d);
+        edges.position.set(x, y, z);
+        scene.add(edges);
+
+        const p = {
+          mesh,
+          edges,
+          x,
+          y,
+          z,
+          w,
+          d,
+          h,
+          top: y + h / 2,
+          shardObj: null,
+          puObj: null,
+          puId: null,
+          bounce,
+          tier,
+          pulse: 0,
+        };
+
+        // rare power-up pickup, otherwise a chance at a shard
+        if (!start && Math.random() < 0.06) {
+          const pu = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+          const m = new THREE.Mesh(puGeo, puMaterial(pu.color));
+          m.position.set(x, p.top + 1.4, z);
+          scene.add(m);
+          p.puObj = m;
+          p.puId = pu.id;
+        } else {
+          const prob = start ? 0 : tier === "tier" ? 0.8 : 0.38; // tiers reward the detour
+          if (Math.random() < prob) {
+            const s = new THREE.Mesh(shardGeo, shardMat);
+            s.position.set(x, p.top + 1.25, z);
+            scene.add(s);
+            p.shardObj = s;
+          }
+        }
+        platforms.push(p);
+        if (tier !== "tier") lastPlat = p; // side tiers never advance the path
+        return p;
+      }
+      function markBounce(p) {
+        p.bounce = true;
+        p.mesh.material = platMatBounce;
+      }
+      function removePlatform(p) {
+        scene.remove(p.mesh);
+        scene.remove(p.edges);
+        if (p.shardObj) scene.remove(p.shardObj);
+        if (p.puObj) scene.remove(p.puObj);
+      }
+
+      function makeRamp(x, z0, z1, y0, y1, w) {
+        if (z1 <= z0 + 0.5) z1 = z0 + 0.5;
+        const dz = z1 - z0,
+          dy = y1 - y0,
+          L = Math.hypot(dz, dy);
+        const mesh = new THREE.Mesh(boxGeo, rampMat);
+        mesh.scale.set(w, 0.4, L);
+        mesh.position.set(x, (y0 + y1) / 2, (z0 + z1) / 2);
+        mesh.rotation.x = -Math.atan2(dy, dz);
+        scene.add(mesh);
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(boxGeo),
+          edgeMat,
+        );
+        edges.scale.copy(mesh.scale);
+        edges.position.copy(mesh.position);
+        edges.rotation.copy(mesh.rotation);
+        scene.add(edges);
+        const r = { x, z0, z1, y0, y1, w, mesh, edges, zmax: z1 };
+        ramps.push(r);
+        return r;
+      }
+      function removeRamp(r) {
+        scene.remove(r.mesh);
+        scene.remove(r.edges);
+      }
+
+      function spawnWallRunPillar(px, pz, d) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const w = 1.4,
+          depth = rand(12, 18);
+        const x = px + side * rand(2.6, 3.3);
+        const yTop = 44,
+          yBot = -34,
+          h = yTop - yBot,
+          cy = (yTop + yBot) / 2;
+        const z = pz + depth * 0.35;
+        const mesh = new THREE.Mesh(boxGeo, wallRunMat);
+        mesh.scale.set(w, h, depth);
+        mesh.position.set(x, cy, z);
+        scene.add(mesh);
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(boxGeo),
+          edgeMat,
+        );
+        edges.scale.copy(mesh.scale);
+        edges.position.copy(mesh.position);
+        scene.add(edges);
+        pillars.push({
+          mesh,
+          edges,
+          wallRun: true,
+          side,
+          wallX: x - side * (w / 2),
+          zMin: z - depth / 2,
+          zMax: z + depth / 2,
+          zmax: z + depth / 2,
+        });
+      }
+      function spawnScenicPillar(px, pz) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const x = px + side * rand(6, 13);
+        const w = rand(1.6, 3.6),
+          depth = rand(1.6, 3.6);
+        const yTop = rand(-3, 9),
+          yBot = -70,
+          h = yTop - yBot,
+          cy = (yTop + yBot) / 2;
+        const mesh = new THREE.Mesh(boxGeo, pillarMat);
+        mesh.scale.set(w, h, depth);
+        mesh.position.set(x, cy, pz);
+        scene.add(mesh);
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(boxGeo),
+          edgeMat,
+        );
+        edges.scale.copy(mesh.scale);
+        edges.position.copy(mesh.position);
+        scene.add(edges);
+        pillars.push({ mesh, edges, wallRun: false, zmax: pz + depth / 2 });
+      }
+      function removePillar(p) {
+        scene.remove(p.mesh);
+        scene.remove(p.edges);
+      }
+
+      // difficulty 0..~1.3 from distance, eased by Steady Nerve upgrade
+      function difficulty() {
+        return Math.min(1.25, player.maxZ / (360 * stats().rampScale));
+      }
+      // reliable horizontal jump distance with current stats
+      function jumpReach() {
+        const s = stats();
+        return s.moveSpeed * ((2 * s.jumpVel) / GRAVITY);
+      }
+      // reliable height a single jump can gain while still moving forward
+      function jumpRise() {
+        const s = stats();
+        return ((s.jumpVel * s.jumpVel) / (2 * GRAVITY)) * 0.62;
+      }
+
+      // next vertical delta for the main path, shaped by the run's mood
+      function nextStepDY(d) {
+        if (run.mood === "climb") {
+          let dy = lerp(0.3, 1.0, Math.random()) + lerp(0.2, 0.8, d);
+          if (Math.random() < 0.32) dy += rand(1.6, 4.2); // occasional big climb (assisted)
+          return dy;
+        } else if (run.mood === "descend") {
+          let dy = -(lerp(0.5, 1.5, Math.random()) + lerp(0.2, 1.0, d));
+          if (Math.random() < 0.32) dy -= rand(1.6, 6.0); // occasional plunge
+          return dy;
+        } else {
+          // undulate
+          return (Math.random() * 2 - 1) * lerp(1.4, 4.8, d);
+        }
+      }
+
+      function spawnSegment() {
+        const d = difficulty();
+        const reach = jumpReach();
+        const w = lerp(5.0, 2.7, d) * rand(0.85, 1.15);
+        const dep = lerp(4.4, 2.7, d) * rand(0.85, 1.15);
+        const gapMax = reach * lerp(0.46, 0.8, d);
+        const gap = lerp(2.2, gapMax, Math.pow(Math.random(), 0.7));
+        const lat = (Math.random() * 2 - 1) * lerp(0.5, 3.4, d);
+
+        const fromX = lastPlat.x,
+          fromY = lastPlat.y,
+          fromZD = lastPlat.z + lastPlat.d / 2;
+        const nz = fromZD + gap + dep / 2;
+        let nx = clamp(fromX + lat, -11, 11);
+
+        let dy = nextStepDY(d);
+        let useRamp = false,
+          bounceTakeoff = false;
+        const rise = jumpRise();
+        if (dy > rise) {
+          // a climb too big for a plain jump → assist it
+          if (Math.random() < 0.45 && dy < 6) {
+            useRamp = true;
+          } else {
+            bounceTakeoff = true;
+            dy = Math.min(dy, 4.6);
+          }
+        }
+        if (dy < -9) dy = -9; // keep plunges survivable (a lower tier may also catch you)
+        const ny = clamp(fromY + dy, -10, 34);
+        if (useRamp) nx = clamp(fromX + lat * 0.25, -11, 11); // keep the straight ramp roughly aligned
+
+        if (useRamp) {
+          // ramp runs from the previous platform's top edge to the next platform's top (flush)
+          makeRamp(
+            (fromX + nx) / 2,
+            fromZD,
+            nz - dep / 2,
+            fromY + 0.4,
+            ny + 0.4,
+            Math.max(2.8, w * 0.85),
+          );
+        } else if (bounceTakeoff) {
+          markBounce(lastPlat); // launch pad on the platform you leave
+        }
+        makePlatform(nx, ny, nz, w, dep, 0.8, { tier: "main" });
+
+        // ---- layered tiers: optional platforms above and below ----
+        if (d > 0.04 && Math.random() < 0.5) {
+          const sx = clamp(
+            nx + (Math.random() < 0.5 ? -1 : 1) * rand(3.6, 6.5),
+            -13,
+            13,
+          );
+          makePlatform(
+            sx,
+            ny + rand(3, 7),
+            nz + rand(-2, 2),
+            lerp(3.6, 2.3, d),
+            lerp(3.6, 2.3, d),
+            0.7,
+            { tier: "tier" },
+          );
+        }
+        if (Math.random() < 0.5) {
+          const sx = clamp(
+            nx + (Math.random() < 0.5 ? -1 : 1) * rand(3.6, 6.5),
+            -13,
+            13,
+          );
+          makePlatform(
+            sx,
+            ny - rand(3, 8),
+            nz + rand(-2, 2),
+            lerp(3.6, 2.3, d),
+            lerp(3.6, 2.3, d),
+            0.7,
+            { tier: "tier" },
+          );
+        }
+
+        // ---- towers: wall-run surfaces + scenic depth ----
+        if (Math.random() < 0.22) spawnWallRunPillar(nx, nz, d);
+        if (Math.random() < 0.3) spawnScenicPillar(nx, nz);
+      }
+
+      function ensureCourse() {
+        while (lastPlat.z < player.z + 72) spawnSegment();
+        const cut = player.z - 26;
+        for (let i = platforms.length - 1; i >= 0; i--) {
+          if (platforms[i].z < cut) {
+            removePlatform(platforms[i]);
+            platforms.splice(i, 1);
+          }
+        }
+        for (let i = ramps.length - 1; i >= 0; i--) {
+          if (ramps[i].zmax < cut) {
+            removeRamp(ramps[i]);
+            ramps.splice(i, 1);
+          }
+        }
+        for (let i = pillars.length - 1; i >= 0; i--) {
+          if (pillars[i].zmax < cut) {
+            removePillar(pillars[i]);
+            pillars.splice(i, 1);
+          }
+        }
+      }
+
+      function resetCourse() {
+        for (const p of platforms) removePlatform(p);
+        for (const r of ramps) removeRamp(r);
+        for (const p of pillars) removePillar(p);
+        platforms.length = ramps.length = pillars.length = 0;
+        lastPlat = null;
+        makePlatform(0, 0, 0, 7, 9, 0.8, { start: true }); // long safe starting pad
+        for (let i = 0; i < 14; i++) spawnSegment();
+      }
+
+      // ============================================================
+      //  PLAYER + PHYSICS
+      // ============================================================
+      const GRAVITY = 26;
+      const EYE = 1.62;
+      const BOUNCE_VEL = 19; // launch speed off a bounce pad
+      const WALL_TIME = 1.5; // seconds you can cling to a wall
+      const FALL_TOLERANCE = 18; // how far below the last safe surface = death
+      let timeScale = 1; // slow-mo time scale (1 = normal)
+
+      const player = {
+        x: 0,
+        y: 1,
+        z: 0, // y = feet height
+        vx: 0,
+        vy: 0,
+        vz: 0,
+        yaw: 0,
+        pitch: 0,
+        onGround: false,
+        jumps: 0,
+        safeY: 0,
+        safeX: 0,
+        safeZ: 0, // last surface we stood on (for shield rescue)
+        maxZ: 0,
+        runShards: 0,
+        dashCD: 0,
+        dashing: 0,
+        onWall: null,
+        wallTime: 0, // wall-run state
+        shieldUsed: false,
+        grace: 0, // shield rescue per run
+      };
+
+      function resetPlayer() {
+        player.x = 0;
+        player.y = 1;
+        player.z = 0;
+        player.vx = player.vy = player.vz = 0;
+        player.yaw = Math.PI;
+        player.pitch = 0; // face +Z, the direction the course builds
+        player.onGround = false;
+        player.jumps = 0;
+        player.safeY = 0;
+        player.safeX = 0;
+        player.safeZ = 0;
+        player.maxZ = 0;
+        player.runShards = 0;
+        player.dashCD = 0;
+        player.dashing = 0;
+        player.onWall = null;
+        player.wallTime = 0;
+        player.shieldUsed = false;
+        player.grace = 0;
+      }
+
+      // input
+      const keys = {};
+      let pointerLocked = false;
+
+      // touch-mode state
+      const IS_TOUCH =
+        ("ontouchstart" in window || navigator.maxTouchPoints > 0) &&
+        matchMedia("(pointer: coarse)").matches;
+      let touchMode = IS_TOUCH;
+      const touchInput = { active: false, x: 0, z: 0 };
+      addEventListener("keydown", (e) => {
+        keys[e.code] = true;
+        if (e.code === "Space") e.preventDefault();
+        if (state === "play") {
+          if (e.code === "Space") tryJump();
+          if (e.code === "ShiftLeft" || e.code === "ShiftRight") tryDash();
+        }
+      });
+      addEventListener("keyup", (e) => {
+        keys[e.code] = false;
+      });
+
+      renderer.domElement.addEventListener("mousemove", (e) => {
+        if (!pointerLocked) return;
+        const sens = 0.0022;
+        player.yaw -= e.movementX * sens;
+        player.pitch -= e.movementY * sens;
+        const lim = Math.PI / 2 - 0.05;
+        player.pitch = clamp(player.pitch, -lim, lim);
+      });
+
+      // ---------- touch controls (tablet / phone) ----------
+      const elTouch = document.getElementById("touchControls");
+      const joyBase = document.getElementById("joyBase");
+      const joyKnob = document.getElementById("joyKnob");
+      const joyZone = document.getElementById("joyZone");
+      const lookZone = document.getElementById("lookZone");
+      const btnJump = document.getElementById("btnJump");
+      const btnDash = document.getElementById("btnDash");
+      const JOY_R = 56,
+        LOOK_SENS = 0.004;
+      let joyId = null,
+        joyX0 = 0,
+        joyY0 = 0;
+      let lookId = null,
+        lookX = 0,
+        lookY = 0;
+
+      function showTouch(on) {
+        if (elTouch) elTouch.classList.toggle("on", on);
+      }
+      function getTouch(list, id) {
+        for (let i = 0; i < list.length; i++) {
+          if (list[i].identifier === id) return list[i];
+        }
+        return null;
+      }
+
+      if (IS_TOUCH) {
+        // dynamic movement joystick (left half)
+        joyZone.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            if (joyId !== null) return;
+            const t = e.changedTouches[0];
+            joyId = t.identifier;
+            joyX0 = t.clientX;
+            joyY0 = t.clientY;
+            joyBase.style.left = joyKnob.style.left = joyX0 + "px";
+            joyBase.style.top = joyKnob.style.top = joyY0 + "px";
+            joyBase.style.opacity = joyKnob.style.opacity = 1;
+          },
+          { passive: false },
+        );
+        joyZone.addEventListener(
+          "touchmove",
+          (e) => {
+            e.preventDefault();
+            const t = getTouch(e.touches, joyId);
+            if (!t) return;
+            let dx = t.clientX - joyX0,
+              dy = t.clientY - joyY0;
+            const d = Math.hypot(dx, dy);
+            if (d > JOY_R) {
+              dx = (dx / d) * JOY_R;
+              dy = (dy / d) * JOY_R;
+            }
+            joyKnob.style.left = joyX0 + dx + "px";
+            joyKnob.style.top = joyY0 + dy + "px";
+            touchInput.x = dx / JOY_R;
+            touchInput.z = dy / JOY_R;
+            touchInput.active = true;
+          },
+          { passive: false },
+        );
+        const joyEnd = (e) => {
+          if (getTouch(e.changedTouches, joyId)) {
+            joyId = null;
+            touchInput.active = false;
+            touchInput.x = touchInput.z = 0;
+            joyBase.style.opacity = joyKnob.style.opacity = 0;
+          }
+        };
+        joyZone.addEventListener("touchend", joyEnd);
+        joyZone.addEventListener("touchcancel", joyEnd);
+
+        // look drag (right half)
+        lookZone.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            if (lookId !== null) return;
+            const t = e.changedTouches[0];
+            lookId = t.identifier;
+            lookX = t.clientX;
+            lookY = t.clientY;
+          },
+          { passive: false },
+        );
+        lookZone.addEventListener(
+          "touchmove",
+          (e) => {
+            e.preventDefault();
+            const t = getTouch(e.touches, lookId);
+            if (!t) return;
+            const dx = t.clientX - lookX,
+              dy = t.clientY - lookY;
+            lookX = t.clientX;
+            lookY = t.clientY;
+            player.yaw -= dx * LOOK_SENS;
+            player.pitch -= dy * LOOK_SENS;
+            const lim = Math.PI / 2 - 0.05;
+            player.pitch = clamp(player.pitch, -lim, lim);
+          },
+          { passive: false },
+        );
+        const lookEnd = (e) => {
+          if (getTouch(e.changedTouches, lookId)) lookId = null;
+        };
+        lookZone.addEventListener("touchend", lookEnd);
+        lookZone.addEventListener("touchcancel", lookEnd);
+
+        // action buttons
+        btnJump.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (state === "play") {
+              tryJump();
+              btnJump.classList.add("hit");
+            }
+          },
+          { passive: false },
+        );
+        btnJump.addEventListener(
+          "touchend",
+          (e) => {
+            e.preventDefault();
+            btnJump.classList.remove("hit");
+          },
+          { passive: false },
+        );
+        btnDash.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (state === "play") {
+              tryDash();
+              btnDash.classList.add("hit");
+            }
+          },
+          { passive: false },
+        );
+        btnDash.addEventListener(
+          "touchend",
+          (e) => {
+            e.preventDefault();
+            btnDash.classList.remove("hit");
+          },
+          { passive: false },
+        );
+      }
+
+      function tryJump() {
+        const s = stats();
+        if (player.onWall) {
+          // wall-jump: up and away
+          player.vy = s.jumpVel * 1.05;
+          player.vx = -player.onWall.side * 9;
+          player.onWall = null;
+          player.wallTime = 0;
+          player.jumps = 1;
+          triggerSwing();
+          return;
+        }
+        if (player.onGround || player.jumps < s.maxJumps) {
+          player.vy = s.jumpVel;
+          player.onGround = false;
+          player.jumps++;
+          triggerSwing();
+        }
+      }
+      function tryDash() {
+        const s = stats();
+        if (!s.dashUnlocked || player.dashCD > 0) return;
+        // burst in look direction (horizontal)
+        const dir = new THREE.Vector3(
+          Math.sin(player.yaw),
+          0,
+          Math.cos(player.yaw),
+        ).multiplyScalar(-1);
+        const power = 17;
+        player.vx = dir.x * power;
+        player.vz = dir.z * power;
+        player.vy = Math.max(player.vy, 2.5);
+        player.dashCD = s.dashCooldown;
+        player.dashing = 0.18;
+        triggerSwing();
+      }
+
+      function updatePlayer(dt) {
+        const s = stats();
+
+        // ---- slow-mo power-up: ease time toward 0.5x while falling ----
+        const slowTarget =
+          hasPU("slowmo") && !player.onGround && player.vy < -2 ? 0.5 : 1;
+        timeScale += (slowTarget - timeScale) * Math.min(1, 8 * dt);
+        const pdt = dt * timeScale; // scaled time for physics
+        if (player.grace > 0) player.grace -= dt; // grace ticks in real time
+
+        // ---- horizontal movement relative to yaw ----
+        let ix = 0,
+          iz = 0;
+        if (keys["KeyW"]) iz -= 1;
+        if (keys["KeyS"]) iz += 1;
+        if (keys["KeyA"]) ix -= 1;
+        if (keys["KeyD"]) ix += 1;
+        if (touchInput.active) {
+          ix = touchInput.x;
+          iz = touchInput.z;
+        }
+        const len = Math.hypot(ix, iz) || 1;
+        ix /= len;
+        iz /= len;
+        // basis vectors from yaw (forward = -Z rotated by yaw)
+        const fX = -Math.sin(player.yaw),
+          fZ = -Math.cos(player.yaw); // forward
+        const rX = Math.cos(player.yaw),
+          rZ = -Math.sin(player.yaw); // right
+        const moveX = fX * -iz + rX * ix;
+        const moveZ = fZ * -iz + rZ * ix;
+
+        const target = s.moveSpeed;
+        const accel = player.onGround ? 90 : 26; // air control weaker
+        const desiredVX = moveX * target,
+          desiredVZ = moveZ * target;
+
+        if (player.dashing > 0) {
+          player.dashing -= pdt;
+        } else {
+          player.vx +=
+            (desiredVX - player.vx) *
+            Math.min(
+              1,
+              ((accel * pdt) / target) * 0.6 + (player.onGround ? 0.25 : 0.08),
+            );
+          player.vz +=
+            (desiredVZ - player.vz) *
+            Math.min(
+              1,
+              ((accel * pdt) / target) * 0.6 + (player.onGround ? 0.25 : 0.08),
+            );
+          // ground friction when no input
+          if (player.onGround && ix === 0 && iz === 0) {
+            player.vx *= 0.78;
+            player.vz *= 0.78;
+          }
+        }
+
+        // ---- wall-run: cling to wall-run pillars while airborne and moving forward ----
+        if (player.onGround) player.onWall = null;
+        if (player.onWall) {
+          const w = player.onWall;
+          player.wallTime -= pdt;
+          const inZ = player.z > w.zMin && player.z < w.zMax;
+          const onPathSide = (player.x - w.wallX) * -w.side; // >0 = on the path side of the wall
+          const movingFwd = player.vz > 2;
+          if (
+            !inZ ||
+            player.wallTime <= 0 ||
+            !movingFwd ||
+            onPathSide > 1.5 ||
+            onPathSide < -0.5
+          ) {
+            player.onWall = null;
+          } else {
+            player.vx = 0;
+            player.vz = Math.max(player.vz, s.moveSpeed * 0.85); // keep momentum along the wall
+          }
+        }
+        if (!player.onWall && !player.onGround) {
+          for (const pl of pillars) {
+            if (!pl.wallRun || player.z <= pl.zMin || player.z >= pl.zMax)
+              continue;
+            const onPathSide = (player.x - pl.wallX) * -pl.side;
+            if (onPathSide > 0 && onPathSide < 0.95 && player.vz > 3) {
+              player.onWall = pl;
+              player.wallTime = WALL_TIME;
+              if (player.vy < 0) player.vy *= 0.3; // catch the fall when you grab on
+              break;
+            }
+          }
+        }
+
+        // ---- gravity (reduced into a slight climb while wall-running) ----
+        if (player.onWall) {
+          player.vy += (1.2 - player.vy) * Math.min(1, 5 * pdt);
+        } else {
+          player.vy -= GRAVITY * pdt;
+          if (player.vy < -40) player.vy = -40;
+        }
+
+        // integrate
+        const prevY = player.y;
+        player.x += player.vx * pdt;
+        player.y += player.vy * pdt;
+        player.z += player.vz * pdt;
+        if (player.onWall) {
+          player.x = player.onWall.wallX - player.onWall.side * 0.45;
+        }
+
+        player.onGround = false;
+
+        // ---- ramps (walkable slopes — run up them) ----
+        for (const r of ramps) {
+          if (
+            player.x > r.x - r.w / 2 - 0.05 &&
+            player.x < r.x + r.w / 2 + 0.05 &&
+            player.z > r.z0 &&
+            player.z < r.z1
+          ) {
+            const t = (player.z - r.z0) / (r.z1 - r.z0);
+            const surf = r.y0 + (r.y1 - r.y0) * t;
+            if (
+              player.y <= surf + 0.3 &&
+              player.y >= surf - 3.5 &&
+              player.vy <= 1.5
+            ) {
+              player.y = surf;
+              player.vy = 0;
+              player.onGround = true;
+              player.jumps = 0;
+              player.safeY = surf;
+              player.safeX = player.x;
+              player.safeZ = player.z;
+              player.onWall = null;
+              break;
+            }
+          }
+        }
+
+        // ---- platform landing (top-only) + bounce pads ----
+        if (!player.onGround && player.vy <= 0) {
+          for (const p of platforms) {
+            const halfW = p.w / 2 + 0.05,
+              halfD = p.d / 2 + 0.05;
+            if (
+              player.x > p.x - halfW &&
+              player.x < p.x + halfW &&
+              player.z > p.z - halfD &&
+              player.z < p.z + halfD
+            ) {
+              if (prevY >= p.top - 0.02 && player.y <= p.top + 0.02) {
+                player.y = p.top;
+                player.onWall = null;
+                if (p.bounce) {
+                  player.vy = BOUNCE_VEL;
+                  player.jumps = 0;
+                  player.safeY = p.top;
+                  p.pulse = 1;
+                  player.safeX = p.x;
+                  player.safeZ = p.z;
+                } else {
+                  player.vy = 0;
+                  player.onGround = true;
+                  player.jumps = 0;
+                  player.safeY = p.top;
+                  player.safeX = p.x;
+                  player.safeZ = p.z;
+                }
+                break;
+              }
+            }
+          }
+        }
+
+        // ---- shard + power-up pickups (magnet pulls shards in) ----
+        const magnet = hasPU("magnet");
+        for (const p of platforms) {
+          if (p.shardObj) {
+            const so = p.shardObj;
+            if (magnet) {
+              const mx = player.x - so.position.x,
+                my = player.y + 1 - so.position.y,
+                mz = player.z - so.position.z;
+              const dist = Math.hypot(mx, my, mz);
+              if (dist < 7 && dist > 0.001) {
+                const k = Math.min(1, (9 * pdt) / dist);
+                so.position.x += mx * k;
+                so.position.y += my * k;
+                so.position.z += mz * k;
+              }
+            }
+            const dx = player.x - so.position.x,
+              dy = player.y + 1 - so.position.y,
+              dz = player.z - so.position.z;
+            if (dx * dx + dy * dy + dz * dz < 1.6) {
+              scene.remove(so);
+              p.shardObj = null;
+              player.runShards += Math.round(5 * s.shardMult);
+              flashShards();
+            }
+          }
+          if (p.puObj) {
+            const dx = player.x - p.puObj.position.x,
+              dy = player.y + 1 - p.puObj.position.y,
+              dz = player.z - p.puObj.position.z;
+            if (dx * dx + dy * dy + dz * dz < 2.2) {
+              scene.remove(p.puObj);
+              const id = p.puId;
+              p.puObj = null;
+              p.puId = null;
+              grantPU(id);
+              saveMeta();
+              const def = POWERUPS.find((x) => x.id === id);
+              showToast(
+                def.name.toUpperCase() + " ×5",
+                "#" + def.color.toString(16).padStart(6, "0"),
+              );
+            }
+          }
+        }
+
+        // ---- cooldowns / records ----
+        if (player.dashCD > 0) player.dashCD = Math.max(0, player.dashCD - pdt);
+        if (player.z > player.maxZ) player.maxZ = player.z;
+
+        // ---- death / shield rescue ----
+        if (
+          !player.onGround &&
+          !player.onWall &&
+          player.grace <= 0 &&
+          player.y < player.safeY - FALL_TOLERANCE
+        ) {
+          if (hasPU("shield") && !player.shieldUsed) {
+            // caught — placed back on the last safe surface, run continues
+            player.shieldUsed = true;
+            player.x = player.safeX;
+            player.z = player.safeZ;
+            player.y = player.safeY + 0.4;
+            player.vx = player.vy = player.vz = 0;
+            player.onGround = false;
+            player.grace = 0.9;
+            showToast("SHIELD SAVED YOU", "#33e1ff");
+            flashScreen("#33e1ff");
+          } else {
+            die();
+          }
+        }
+
+        // ---- camera (with a slight roll while wall-running) ----
+        camera.position.set(player.x, player.y + EYE, player.z);
+        const look = new THREE.Vector3(
+          Math.cos(player.pitch) * Math.sin(player.yaw) * -1,
+          Math.sin(player.pitch),
+          Math.cos(player.pitch) * Math.cos(player.yaw) * -1,
+        );
+        camera.lookAt(
+          camera.position.x + look.x,
+          camera.position.y + look.y,
+          camera.position.z + look.z,
+        );
+        if (player.onWall) {
+          camera.rotateZ(player.onWall.side * 0.14);
+        }
+
+        updateArm(pdt);
+      }
+
+      // ============================================================
+      //  GAME STATE MACHINE
+      // ============================================================
+      let state = "menu"; // menu | play | dead
+      const elMenu = document.getElementById("menu");
+      const elShop = document.getElementById("shop");
+      const elPaused = document.getElementById("paused");
+      const elHud = document.getElementById("hud");
+      const elCross = document.getElementById("crosshair");
+      const elSpeed = document.getElementById("speedlines");
+
+      function show(el, on) {
+        el.classList.toggle("hidden", !on);
+      }
+
+      function startRun() {
+        buildPips(); // jump count may have changed in the shop
+        run.mood = ["climb", "descend", "undulate"][
+          Math.floor(Math.random() * 3)
+        ];
+        resetPlayer();
+        resetCourse();
+        timeScale = 1;
+        puSig = "";
+        toastTime = 0;
+        flashAmt = 0;
+        elFlash.style.opacity = 0;
+        elToast.style.opacity = 0;
+        elSlowVig.style.opacity = 0;
+        state = "play";
+        show(elMenu, false);
+        show(elShop, false);
+        show(elPaused, false);
+        elHud.classList.add("on");
+        elCross.classList.add("on");
+        const moodEl = document.getElementById("hud-mood");
+        if (moodEl) moodEl.textContent = MOOD_LABEL[run.mood];
+        if (touchMode) {
+          showTouch(true);
+        } else {
+          requestLock();
+        }
+      }
+
+      function die() {
+        if (state !== "play") return;
+        state = "dead";
+        // each held power-up loses one of its 5 lives; note any that ran out
+        const lost = [];
+        for (const pu of POWERUPS) {
+          if (META.powerups[pu.id] > 0) {
+            META.powerups[pu.id]--;
+            if (META.powerups[pu.id] === 0) lost.push(pu.name);
+          }
+        }
+        // bank shards + distance bonus
+        const s = stats();
+        const distBonus = Math.round(player.maxZ * 0.6 * s.shardMult);
+        const earned = player.runShards + distBonus;
+        META.bank += earned;
+        if (player.maxZ > META.best) META.best = player.maxZ;
+        saveMeta();
+        // UI
+        document.getElementById("shop-title").textContent = pickDeathLine();
+        const lostMsg = lost.length
+          ? ` · <span style="color:#ff7a7a">lost ${lost.join(" & ")}</span>`
+          : "";
+        document.getElementById("run-summary").innerHTML = `<b>${
+          MOOD_LABEL[run.mood]
+        }</b> run · reached <b>${Math.floor(player.maxZ)}m</b> · ${
+          player.runShards
+        } pickup + ${distBonus} distance = <b>${earned} ◆</b>${lostMsg}`;
+        renderShop();
+        elHud.classList.remove("on");
+        elCross.classList.remove("on");
+        showTouch(false);
+        elSpeed.style.opacity = 0;
+        elSlowVig.style.opacity = 0;
+        timeScale = 1;
+        show(elShop, true);
+        document.exitPointerLock?.();
+      }
+
+      const DEATH_LINES = [
+        "YOU FELL",
+        "THE VOID TOOK YOU",
+        "MISSED IT",
+        "GRAVITY WINS",
+        "SO CLOSE",
+      ];
+      function pickDeathLine() {
+        return DEATH_LINES[Math.floor(Math.random() * DEATH_LINES.length)];
+      }
+
+      // ---------- shop rendering ----------
+      function renderShop() {
+        document.getElementById("bank").textContent = META.bank;
+        const grid = document.getElementById("shop-grid");
+        grid.innerHTML = "";
+        for (const u of UPGRADES) {
+          const lvl = META.up[u.id];
+          const maxed = lvl >= u.max;
+          const cost = costOf(u);
+          const afford = META.bank >= cost;
+          const card = document.createElement("div");
+          card.className =
+            "up" +
+            (maxed ? " maxed" : "") +
+            (!maxed && !afford ? " locked" : "");
+          const segs = Array.from(
+            { length: u.max },
+            (_, i) => `<div class="seg ${i < lvl ? "on" : ""}"></div>`,
+          ).join("");
+          card.innerHTML = `
+      <div class="up-top">
+        <span class="up-name">${u.name}</span>
+        <span class="up-cost ${!afford && !maxed ? "cant" : ""}">${
+          maxed ? "MAX" : "◆ " + cost
+        }</span>
+      </div>
+      <div class="up-desc">${u.desc}</div>
+      <div class="up-bar">${segs}</div>`;
+          if (!maxed && afford) {
+            card.addEventListener("click", () => {
+              if (META.bank >= cost && META.up[u.id] < u.max) {
+                META.bank -= cost;
+                META.up[u.id]++;
+                saveMeta();
+                renderShop();
+              }
+            });
+          }
+          grid.appendChild(card);
+        }
+        renderPowerupsShop();
+        renderSwatches();
+      }
+
+      const PU_ICON = { shield: "🛡", slowmo: "⧗", magnet: "🧲", xjump: "⤊" };
+      function renderPowerupsShop() {
+        const grid = document.getElementById("pu-grid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        for (const pu of POWERUPS) {
+          const lives = META.powerups[pu.id];
+          const full = lives >= MAX_LIVES;
+          const afford = META.bank >= pu.cost;
+          const card = document.createElement("div");
+          card.className =
+            "up" + (full ? " maxed" : "") + (!full && !afford ? " locked" : "");
+          const col = "#" + pu.color.toString(16).padStart(6, "0");
+          const segs = Array.from(
+            { length: MAX_LIVES },
+            (_, i) => `<div class="seg ${i < lives ? "on" : ""}"></div>`,
+          ).join("");
+          card.style.setProperty("--c", col);
+          card.innerHTML = `
+      <div class="up-top">
+        <span class="up-name"><span class="pu-tag" style="color:${col}">${
+          PU_ICON[pu.id] || "◆"
+        }</span> ${pu.name}</span>
+        <span class="up-cost ${!afford && !full ? "cant" : ""}">${
+          full ? "FULL" : "◆ " + pu.cost
+        }</span>
+      </div>
+      <div class="up-desc">${pu.desc}</div>
+      <div class="up-bar">${segs}</div>`;
+          if (!full && afford) {
+            card.addEventListener("click", () => {
+              if (META.bank >= pu.cost && META.powerups[pu.id] < MAX_LIVES) {
+                META.bank -= pu.cost;
+                grantPU(pu.id);
+                saveMeta();
+                renderShop();
+              }
+            });
+          }
+          grid.appendChild(card);
+        }
+      }
+
+      function renderSwatches() {
+        const sw = document.getElementById("arm-swatches");
+        if (!sw) return;
+        sw.innerHTML = "";
+        for (const c of ARM_COLORS) {
+          const owned = !!META.armUnlocked[c.id];
+          const selected = META.armColor === c.id;
+          const afford = META.bank >= c.cost;
+          const el = document.createElement("button");
+          el.className =
+            "swatch" +
+            (selected ? " sel" : "") +
+            (owned ? "" : " locked") +
+            (!owned && afford ? " afford" : "");
+          el.style.setProperty(
+            "--c",
+            "#" + c.hex.toString(16).padStart(6, "0"),
+          );
+          el.title = c.name;
+          if (!owned) el.innerHTML = `<span class="price">◆${c.cost}</span>`;
+          el.addEventListener("click", () => {
+            if (owned) {
+              META.armColor = c.id;
+              applyArmColor();
+              saveMeta();
+              renderShop();
+            } else if (META.bank >= c.cost) {
+              META.bank -= c.cost;
+              META.armUnlocked[c.id] = true;
+              META.armColor = c.id;
+              applyArmColor();
+              saveMeta();
+              renderShop();
+            }
+          });
+          sw.appendChild(el);
+        }
+      }
+
+      // ============================================================
+      //  POINTER LOCK + UI BUTTONS
+      // ============================================================
+      function requestLock() {
+        renderer.domElement.requestPointerLock?.();
+      }
+
+      document.addEventListener("pointerlockchange", () => {
+        pointerLocked = document.pointerLockElement === renderer.domElement;
+        if (touchMode) return;
+        if (!pointerLocked && state === "play") {
+          // cursor released mid-run -> soft pause
+          show(elPaused, true);
+        } else if (pointerLocked && state === "play") {
+          show(elPaused, false);
+        }
+      });
+
+      document.getElementById("play-btn").addEventListener("click", startRun);
+      document.getElementById("run-again").addEventListener("click", startRun);
+      document.getElementById("resume-btn").addEventListener("click", () => {
+        show(elPaused, false);
+        requestLock();
+      });
+
+      // ============================================================
+      //  HUD UPDATE
+      // ============================================================
+      let shardFlash = 0;
+      function flashShards() {
+        shardFlash = 1;
+      }
+
+      // ---- screen effects ----
+      const elSlowVig = document.getElementById("slowvig");
+      const elFlash = document.getElementById("flash");
+      const elToast = document.getElementById("toast");
+      let flashAmt = 0,
+        toastTime = 0;
+      function flashScreen(color) {
+        elFlash.style.background = color || "#fff";
+        flashAmt = 0.7;
+      }
+      function showToast(text, color) {
+        elToast.textContent = text;
+        elToast.style.color = color || "#fff";
+        toastTime = 1.4;
+      }
+      function updateFX(dt) {
+        if (flashAmt > 0) {
+          flashAmt = Math.max(0, flashAmt - dt * 2.2);
+          elFlash.style.opacity = flashAmt;
+        }
+        if (toastTime > 0) {
+          toastTime -= dt;
+          const k = Math.min(1, toastTime * 2.5); // fade near the end
+          elToast.style.opacity = k;
+          elToast.style.transform = `translate(-50%,-50%) scale(${
+            1 + (1 - Math.min(1, (1.4 - toastTime) * 3)) * 0.15
+          })`;
+        } else elToast.style.opacity = 0;
+        elSlowVig.style.opacity = (1 - timeScale) * 1.6; // visible while slowed
+      }
+
+      // ---- HUD power-up tray ----
+      const PU_HUD_ICON = {
+        shield: "🛡",
+        slowmo: "⧗",
+        magnet: "🧲",
+        xjump: "⤊",
+      };
+      const elPowerups = document.getElementById("powerups");
+      let puSig = "";
+      function updatePowerupHud() {
+        const sig = POWERUPS.map((p) => META.powerups[p.id]).join(",");
+        if (sig === puSig) return; // only rebuild when lives change
+        puSig = sig;
+        elPowerups.innerHTML = "";
+        for (const pu of POWERUPS) {
+          const lives = META.powerups[pu.id];
+          if (lives <= 0) continue;
+          const col = "#" + pu.color.toString(16).padStart(6, "0");
+          const lifeDots = Array.from(
+            { length: MAX_LIVES },
+            (_, i) => `<div class="pu-life ${i < lives ? "" : "spent"}"></div>`,
+          ).join("");
+          const el = document.createElement("div");
+          el.className = "pu";
+          el.style.setProperty("--c", col);
+          el.innerHTML = `<div class="pu-icon">${
+            PU_HUD_ICON[pu.id] || "◆"
+          }</div><div class="pu-lives">${lifeDots}</div>`;
+          elPowerups.appendChild(el);
+        }
+      }
+
+      const elDist = document.getElementById("hud-distance");
+      const elSh = document.getElementById("hud-shards");
+      const elBest = document.getElementById("hud-best");
+      const elPips = document.getElementById("pips");
+      const elDash = document.getElementById("dash-ind");
+
+      function buildPips() {
+        const s = stats();
+        elPips.innerHTML = "";
+        for (let i = 0; i < s.maxJumps; i++) {
+          const d = document.createElement("div");
+          d.className = "pip";
+          elPips.appendChild(d);
+        }
+      }
+      function updateHud() {
+        elDist.textContent = Math.floor(player.maxZ);
+        elSh.textContent = player.runShards;
+        elBest.textContent = "BEST " + Math.floor(META.best) + "m";
+        const s = stats();
+        // jump pips: remaining jumps
+        const used = player.onGround ? 0 : player.jumps;
+        const remaining = s.maxJumps - used;
+        const pips = elPips.children;
+        for (let i = 0; i < pips.length; i++) {
+          pips[i].classList.toggle("full", i < remaining);
+        }
+        // dash indicator
+        if (!s.dashUnlocked) {
+          elDash.textContent = "DASH —";
+          elDash.classList.remove("ready");
+        } else if (player.dashCD > 0) {
+          elDash.textContent = "DASH " + player.dashCD.toFixed(1);
+          elDash.classList.remove("ready");
+        } else {
+          elDash.textContent = "DASH READY";
+          elDash.classList.add("ready");
+        }
+        // on-screen dash button mirrors availability
+        if (touchMode) {
+          btnDash.style.display = s.dashUnlocked ? "flex" : "none";
+          btnDash.style.opacity =
+            s.dashUnlocked && player.dashCD <= 0 ? "1" : "0.4";
+        }
+        // speed vignette by horizontal speed
+        const spd = Math.hypot(player.vx, player.vz);
+        elSpeed.style.opacity = clamp(
+          (spd - stats().moveSpeed * 0.9) / 8,
+          0,
+          0.9,
+        );
+        if (shardFlash > 0) {
+          elSh.style.transform = `scale(${1 + shardFlash * 0.25})`;
+          shardFlash = Math.max(0, shardFlash - 0.08);
+        } else elSh.style.transform = "scale(1)";
+        updatePowerupHud();
+      }
+
+      // ============================================================
+      //  MENU AMBIENT CAMERA (the live course is the menu backdrop)
+      // ============================================================
+      let menuT = 0;
+      function menuCamera(dt) {
+        menuT += dt * 0.25;
+        const r = 10;
+        camera.position.set(
+          Math.sin(menuT) * r,
+          5 + Math.sin(menuT * 0.6) * 1.5,
+          Math.cos(menuT) * r + 8,
+        );
+        camera.lookAt(0, 1.5, 6);
+      }
+
+      // ============================================================
+      //  MAIN LOOP
+      // ============================================================
+      let last = performance.now();
+      function loop(now) {
+        let dt = (now - last) / 1000;
+        last = now;
+        dt = Math.min(dt, 0.033); // clamp for stability
+
+        const playing = state === "play" && (pointerLocked || touchMode);
+        if (armGroup) armGroup.visible = state === "play";
+        if (playing) {
+          updatePlayer(dt);
+          ensureCourse();
+          updateHud();
+        } else if (state === "menu") {
+          menuCamera(dt);
+        }
+
+        // animate shards + bounce pads + power-up pickups (always)
+        for (const p of platforms) {
+          if (p.shardObj) {
+            p.shardObj.rotation.y += dt * 2;
+            p.shardObj.rotation.x += dt * 1.1;
+            p.shardObj.position.y =
+              p.top + 1.25 + Math.sin(now * 0.003 + p.z) * 0.12;
+          }
+          if (p.puObj) {
+            p.puObj.rotation.y += dt * 1.8;
+            p.puObj.rotation.z += dt * 1.2;
+            p.puObj.position.y =
+              p.top + 1.4 + Math.sin(now * 0.0026 + p.z) * 0.14;
+          }
+          if (p.bounce) {
+            if (p.pulse > 0) p.pulse = Math.max(0, p.pulse - dt * 2.5);
+            const k = 1 + p.pulse * 0.9;
+            p.mesh.scale.set(p.w, p.h * k, p.d);
+            p.edges.scale.set(p.w, p.h * k, p.d);
+          }
+        }
+        rim.position.x = Math.sin(now * 0.0006) * 10;
+        updateFX(dt);
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(loop);
+      }
+
+      // ============================================================
+      //  UTIL + BOOT
+      // ============================================================
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+      function clamp(v, a, b) {
+        return Math.max(a, Math.min(b, v));
+      }
+      function rand(a, b) {
+        return a + Math.random() * (b - a);
+      }
+
+      addEventListener("resize", () => {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      });
+
+      (async function boot() {
+        await loadMeta();
+        applyArmColor();
+        resetCourse(); // build a course so the menu has a live backdrop
+        buildPips();
+        document.getElementById("hud-best").textContent =
+          "BEST " + Math.floor(META.best) + "m";
+        if (IS_TOUCH) {
+          document.getElementById("play-btn").textContent = "Tap to run";
+          document.querySelector("#menu .controls").innerHTML =
+            "<span><b>LEFT</b> joystick</span><span><b>RIGHT</b> drag to look</span>" +
+            "<span><b>JUMP</b> / <b>DASH</b> buttons</span>";
+        }
+        requestAnimationFrame(loop);
+      })();
+    </script>
+  </body>
+</html>
