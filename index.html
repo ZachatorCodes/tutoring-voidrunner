@@ -4844,6 +4844,23 @@
       const MET = { x: -485, z: 180 }; // MetLife Stadium (New Jersey)
       const CPARK = { x: 150, z: 150 }; // Central Park (big green, zoo, lake)
       const TSQ = { x: -6, z: -92 }; // Times Square (screens)
+      const WLS = { x: 90, z: 255 }; // Waterline Square (glass towers, waterfront by the ferry)
+      const WLSO = { x: 6900, z: 6300 }; // tower lobby interior (far origin)
+      const WLSA = { x: 6900, z: 6600 }; // tower penthouse interior (far origin)
+      const TOWER_NAMES = [
+        "River Tower",
+        "Harbor Tower",
+        "Sky Tower",
+        "Park Tower",
+        "Marina Tower",
+      ];
+      const TOWERS = [
+        { x: -30, z: -4, w: 16, d: 16, h: 66 },
+        { x: -4, z: 20, w: 18, d: 18, h: 80 },
+        { x: 30, z: 4, w: 17, d: 17, h: 72 },
+        { x: 8, z: -22, w: 15, d: 15, h: 46 },
+        { x: 28, z: -24, w: 14, d: 14, h: 54 },
+      ];
       const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
       const _signs = {};
@@ -4935,8 +4952,8 @@
       }
 
       // enterable shop: hollow shell with a doorway facing the avenue (doorDir = +1 door on +x wall, -1 on -x wall)
-      function exShop(cx, cz, w, d, h, doorDir, name, kind) {
-        const win = pickWinMat(w, h),
+      function exShop(cx, cz, w, d, h, doorDir, name, kind, wallMat) {
+        const win = wallMat || pickWinMat(w, h),
           T = 0.35,
           door = 2.0;
         exAdd(w - 0.1, 0.1, d - 0.1, fmat(0x2c2c34), cx, 0.05, cz); // interior floor
@@ -5032,10 +5049,10 @@
             x: inX + doorDir * 1.4,
             z: cz,
             r: 2.4,
-            label: "grab a slice at Peppino",
+            label: "grab a slice at " + name,
             action: () => {
               showHeld(0xf0c860);
-              showToast("Peppino's finest \u2014 mmm!", "#ffcf6a");
+              showToast(name + "'s finest \u2014 mmm!", "#ffcf6a");
             },
           });
         } else if (kind === "deli") {
@@ -5365,6 +5382,7 @@
         if (Math.abs(x - CPARK.x) < 78 && Math.abs(z - CPARK.z) < 98)
           return true; // Central Park
         if (Math.abs(x - TSQ.x) < 17 && Math.abs(z - TSQ.z) < 17) return true; // Times Square
+        if (Math.abs(x - WLS.x) < 64 && z > 206) return true; // Waterline Square pad
         if (Math.abs(x - 34) < 9 && Math.abs(z + 24) < 9) return true; // coffee shop
         if (Math.abs(x + 34) < 9 && Math.abs(z + 24) < 9) return true; // arcade
         if (Math.abs(x - 36) < 9 && Math.abs(z - 26) < 9) return true; // toy store
@@ -5840,13 +5858,27 @@
         for (let gx = -CITY_G; gx <= CITY_G; gx++)
           for (let gz = -CITY_G; gz <= CITY_G; gz++) exBlockGroup(gx, gz);
         // ---- named enterable shops ringing the spawn plaza ----
-        exShop(-14, 17, 10, 9, 7, +1, "PEPPINO", "pizza");
+        exShop(
+          -14,
+          17,
+          10,
+          9,
+          7,
+          +1,
+          "PEPPERINO",
+          "pizza",
+          new THREE.MeshStandardMaterial({
+            color: 0xc0392b,
+            roughness: 0.7,
+            metalness: 0.0,
+          }),
+        );
         exShop(14, 14, 10, 9, 7, -1, "KOENIG DELI", "deli");
         exShop(-14, -13, 10, 9, 7, +1, "CORNER MART", "shop");
         exShop(14, -11, 10, 9, 7, -1, "SUNRISE DELI", "deli");
         exShop(-24, 44, 10, 9, 7, +1, "BEAN THERE COFFEE", "shop");
         exShop(24, 44, 10, 9, 7, -1, "SLICE OF LIFE", "pizza");
-        // ice-cream cart + vendor next to Peppino
+        // ice-cream cart + vendor next to Pepperino
         exAdd(2.4, 1.3, 1.6, fmat(0xfff0f6), -7, 0.75, 23);
         exAdd(2.6, 0.2, 1.8, fmat(0xff9ad0), -7, 1.45, 23);
         exAdd(0.12, 2.2, 0.12, nycMetal, -7, 2.4, 23);
@@ -6001,6 +6033,7 @@
         buildRain();
         buildCentralPark();
         buildTimesSquare();
+        buildWaterlineSquare();
         buildStreetLife();
         buildSubway();
         buildCityShops();
@@ -6798,7 +6831,7 @@
 
       const TRAVEL = [
         { n: "Spawn Plaza", x: 0, z: 0, yaw: Math.PI },
-        { n: "Peppino Pizzeria", x: -6, z: 12, yaw: Math.PI },
+        { n: "Pepperino Pizzeria", x: -6, z: 12, yaw: Math.PI },
         { n: "Empire State", x: ES.x, z: ES.z - 26, yaw: Math.PI },
         { n: "Sports Park", x: PARK.x - 32, z: PARK.z, yaw: -Math.PI / 2 },
         {
@@ -6842,6 +6875,12 @@
           n: "Times Square \ud83c\udfc6",
           x: TSQ.x,
           z: TSQ.z + 10,
+          yaw: Math.PI,
+        },
+        {
+          n: "Waterline Square \ud83c\udfe2",
+          x: WLS.x + 2,
+          z: WLS.z - 2,
           yaw: Math.PI,
         },
       ];
@@ -7950,76 +7989,199 @@
       // ================= MetLife Stadium (giant) =================
       function buildMetLife(cx, cz) {
         exParent = null;
-        exAdd(150, 0.1, 120, fmat(0x3a5a34), cx, 0.05, cz); // field turf
-        for (let i = -60; i <= 60; i += 10)
-          exAdd(60, 0.06, 0.5, fmat(0xf0f0f0), cx, 0.12, cz + i); // yard lines
-        for (const s of [-1, 1]) {
-          exAdd(2, 7, 0.4, fmat(0xf4d03a), cx + s * 54, 3.5, cz);
-          exAdd(0.4, 0.4, 7, fmat(0xf4d03a), cx + s * 54, 7, cz);
-        } // goalposts
-        // seating bowl (rings of stands rising outward)
-        const rings = 7;
-        for (let r = 0; r < rings; r++) {
-          const inX = 80 + r * 7,
-            inZ = 68 + r * 7,
-            y = 2 + r * 3.2,
-            col = r % 2 ? 0x2a3550 : 0x39456a;
-          exAdd(inX * 2, 3.2, 4, fmat(col), cx, y, cz - inZ);
-          exAdd(inX * 2, 3.2, 4, fmat(col), cx, y, cz + inZ);
-          exAdd(4, 3.2, inZ * 2, fmat(col), cx - inX, y, cz);
-          exAdd(4, 3.2, inZ * 2, fmat(col), cx + inX, y, cz);
-          // corners
-          for (const sx of [-1, 1])
-            for (const sz of [-1, 1])
-              exAdd(
-                10,
-                3.2,
-                10,
-                fmat(col),
-                cx + sx * inX * 0.72,
-                y,
-                cz + sz * inZ * 0.72,
-              );
-        }
-        // VIP box ring near the top
-        for (let i = 0; i < 24; i++) {
-          const a = (i / 24) * Math.PI * 2,
-            rx = Math.cos(a) * 104,
-            rz = Math.sin(a) * 92;
+        // ---------- field ----------
+        exAdd(156, 0.4, 80, fmat(0x2b5f2c), cx, 0.2, cz); // ground apron
+        for (let i = -6; i <= 6; i++)
           exAdd(
-            7,
-            3,
-            4,
-            new THREE.MeshStandardMaterial({
-              color: 0x20242e,
-              emissive: 0x88b0ff,
-              emissiveIntensity: 0.3,
-              transparent: true,
-              opacity: 0.7,
-            }),
-            cx + rx,
-            24,
-            cz + rz,
-            a,
-          );
-        }
+            9,
+            0.5,
+            54,
+            fmat(i % 2 ? 0x2f6a30 : 0x3a8038),
+            cx + i * 9,
+            0.3,
+            cz,
+          ); // mown stripes
+        exAdd(22, 0.53, 54, fmat(0x1a3a8a), cx - 56, 0.31, cz); // blue end zone
+        exAdd(22, 0.53, 54, fmat(0x1a6a3a), cx + 56, 0.31, cz); // green end zone
+        for (let i = -5; i <= 5; i++)
+          exAdd(0.6, 0.55, 54, fmat(0xeef2f5), cx + i * 9, 0.33, cz); // yard lines
+        for (let i = -5; i <= 5; i++) {
+          exAdd(0.5, 0.55, 1.2, fmat(0xeef2f5), cx + i * 9, 0.34, cz - 10);
+          exAdd(0.5, 0.55, 1.2, fmat(0xeef2f5), cx + i * 9, 0.34, cz + 10);
+        } // hashes
         exAdd(
-          60,
-          6,
-          1.5,
-          signMat("METLIFE STADIUM", "#ffffff", 60, 6),
+          10,
+          0.56,
+          10,
+          new THREE.MeshStandardMaterial({
+            color: 0x2a4a9a,
+            emissive: 0x16264f,
+            emissiveIntensity: 0.35,
+          }),
           cx,
-          30,
-          cz - 95,
+          0.35,
+          cz,
+        ); // midfield logo
+        for (const s of [-1, 1]) {
+          exAdd(0.4, 7, 0.4, fmat(0xf4d03a), cx + s * 64, 3.5, cz);
+          exAdd(0.4, 0.4, 7.4, fmat(0xf4d03a), cx + s * 64, 7, cz);
+          exAdd(0.4, 4, 0.4, fmat(0xf4d03a), cx + s * 64, 9, cz - 3.5);
+          exAdd(0.4, 4, 0.4, fmat(0xf4d03a), cx + s * 64, 9, cz + 3.5);
+        } // goalposts
+        // ---------- crowd-filled seat material ----------
+        const cc = document.createElement("canvas");
+        cc.width = 96;
+        cc.height = 32;
+        const cg = cc.getContext("2d");
+        cg.fillStyle = "#2a2f3a";
+        cg.fillRect(0, 0, 96, 32);
+        const cr = [
+          "#dcdcdc",
+          "#c23b2e",
+          "#2f56c8",
+          "#3f9a41",
+          "#e6c63c",
+          "#f4f4f4",
+          "#9a3fa0",
+          "#e07a30",
+        ];
+        for (let i = 0; i < 640; i++) {
+          cg.fillStyle = cr[(Math.random() * cr.length) | 0];
+          cg.fillRect(Math.random() * 96, Math.random() * 32, 1.5, 1.5);
+        }
+        const ctex = new THREE.CanvasTexture(cc);
+        if (THREE.RepeatWrapping) {
+          ctex.wrapS = ctex.wrapT = THREE.RepeatWrapping;
+        }
+        ctex.repeat.set(8, 1);
+        const crowdMat = new THREE.MeshStandardMaterial({
+          map: ctex,
+          roughness: 0.92,
+        });
+        // ---------- oval tiered bowl ----------
+        const sup = (a, b, ang) => {
+          const c = Math.cos(ang),
+            s = Math.sin(ang),
+            n = 2.6;
+          return [
+            a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n),
+            b * Math.sign(s) * Math.pow(Math.abs(s), 2 / n),
+          ];
+        };
+        const seg = (px, py, pz, w, h, dep, ry, rake, mat) => {
+          const m = new THREE.Mesh(boxGeo, mat);
+          m.rotation.order = "YXZ";
+          m.rotation.y = ry;
+          m.rotation.x = rake;
+          m.scale.set(w, h, dep);
+          m.position.set(px, py, pz);
+          m.matrixAutoUpdate = false;
+          m.updateMatrix();
+          exploreWorld.add(m);
+          return m;
+        };
+        const N = 60,
+          aIn = 82,
+          bIn = 54,
+          dA = 8,
+          dB = 7;
+        const tiers = [2.8, 6.8, 11.0, 15.6, 20.6];
+        tiers.forEach((y, r) => {
+          const a = aIn + r * dA,
+            b = bIn + r * dB,
+            per = Math.PI * (1.5 * (a + b) - Math.sqrt(a * b)),
+            sw = (per / N) * 1.2;
+          for (let k = 0; k < N; k++) {
+            const ang = (k / N) * 6.2832;
+            const pt = sup(a, b, ang),
+              ry = Math.atan2(-pt[0], -pt[1]);
+            seg(cx + pt[0], y, cz + pt[1], sw, 4.0, 8.6, ry, 0.42, crowdMat);
+          }
+        });
+        // club / suite ring (glass) mid-bowl
+        const suite = new THREE.MeshStandardMaterial({
+          color: 0x20242e,
+          emissive: 0x88b0ff,
+          emissiveIntensity: 0.35,
+          transparent: true,
+          opacity: 0.72,
+          metalness: 0.5,
+          roughness: 0.2,
+        });
+        {
+          const a = aIn + 2.5 * dA,
+            b = bIn + 2.5 * dB,
+            per = Math.PI * (1.5 * (a + b) - Math.sqrt(a * b)),
+            sw = (per / N) * 1.22;
+          for (let k = 0; k < N; k++) {
+            const ang = (k / N) * 6.2832,
+              pt = sup(a, b, ang),
+              ry = Math.atan2(-pt[0], -pt[1]);
+            seg(cx + pt[0], 13.2, cz + pt[1], sw, 2.2, 2.2, ry, 0, suite);
+          }
+        }
+        // ---------- louvered aluminium exterior (MetLife signature) ----------
+        const aF = aIn + 4 * dA + 8,
+          bF = bIn + 4 * dB + 8;
+        const facMat = new THREE.MeshStandardMaterial({
+          color: 0xbcc4cc,
+          metalness: 0.75,
+          roughness: 0.32,
+          emissive: 0x2a4c78,
+          emissiveIntensity: 0.22,
+        });
+        for (let k = 0; k < 104; k++) {
+          const ang = (k / 104) * 6.2832,
+            pt = sup(aF, bF, ang),
+            ry = Math.atan2(-pt[0], -pt[1]);
+          seg(cx + pt[0], 15, cz + pt[1], 1.2, 32, 1.7, ry, 0, facMat);
+        }
+        // roof rim + light banks
+        for (let k = 0; k < N; k++) {
+          const ang = (k / N) * 6.2832,
+            pt = sup(aF - 1, bF - 1, ang);
+          exAdd(2.4, 1.3, 2.4, nycMetal, cx + pt[0], 31.2, cz + pt[1]);
+        }
+        const lampMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          emissive: 0xffffff,
+          emissiveIntensity: 0.95,
+        });
+        for (let k = 0; k < 12; k++) {
+          const ang = (k / 12) * 6.2832,
+            pt = sup(aF - 2, bF - 2, ang),
+            ry = Math.atan2(-pt[0], -pt[1]);
+          exAdd(1, 7, 1, nycMetal, cx + pt[0], 34.5, cz + pt[1]);
+          exAdd(7, 1, 1.6, lampMat, cx + pt[0], 38, cz + pt[1], ry);
+        }
+        // ---------- end-zone scoreboards ----------
+        const sbMat = new THREE.MeshStandardMaterial({
+          color: 0x090910,
+          emissive: 0x2a6adf,
+          emissiveIntensity: 0.65,
+        });
+        for (const s of [-1, 1]) {
+          exAdd(4, 16, 30, nycMetal, cx + s * (aIn + 12), 24, cz);
+          exAdd(2.5, 11, 25, sbMat, cx + s * (aIn + 9.6), 26, cz);
+        }
+        // ---------- signage, entrance, crowd ----------
+        exAdd(
+          64,
+          6,
+          1.6,
+          signMat("METLIFE STADIUM", "#ffffff", 64, 6),
+          cx,
+          35,
+          cz - (bF + 2),
         );
-        exAdd(14, 0.1, 10, fmat(0x22232a), cx, 0.13, cz - 70); // entrance tunnel mouth
-        addBlob(cx, cz, 90);
-        for (let i = 0; i < 8; i++)
-          exPeople.push(mkExPerson(cx + rand(-40, 40), cz + rand(-30, 30)));
+        exAdd(18, 5, 10, fmat(0x22232a), cx, 2.5, cz - (bIn - 3)); // entrance tunnel
+        addBlob(cx, cz, Math.max(aF, bF) * 0.96);
+        for (let i = 0; i < 12; i++)
+          exPeople.push(mkExPerson(cx + rand(-48, 48), cz + rand(-30, 30)));
         exInteractables.push({
           x: cx,
-          z: cz - 66,
-          r: 8,
+          z: cz - 62,
+          r: 9,
           label: "walk onto the MetLife field \ud83c\udfc8",
           action: () => showToast("Welcome to MetLife Stadium!", "#bfe3ff"),
         });
@@ -8437,6 +8599,347 @@
         exCoins.push({ mesh: m, x, z, kind: kind || "coin", got: false });
         return m;
       }
+      // ============================================================
+      //  WATERLINE SQUARE: glass towers · courtyard · lobbies · penthouse elevators
+      // ============================================================
+      function glassTowerMat(w, h) {
+        const cols = clamp(Math.round(w / 2.2), 4, 9),
+          rows = clamp(Math.round(h / 2.4), 12, 34);
+        const c = document.createElement("canvas");
+        c.width = 64;
+        c.height = 256;
+        const g = c.getContext("2d");
+        const grd = g.createLinearGradient(0, 0, 0, 256);
+        grd.addColorStop(0, "#9ec2e0");
+        grd.addColorStop(0.5, "#6f9cc0");
+        grd.addColorStop(1, "#5a86ac");
+        g.fillStyle = grd;
+        g.fillRect(0, 0, 64, 256);
+        const pw = 64 / cols,
+          ph = 256 / rows;
+        for (let yy = 0; yy < rows; yy++)
+          for (let xx = 0; xx < cols; xx++) {
+            g.fillStyle =
+              Math.random() < 0.22
+                ? "rgba(255,236,190,0.85)"
+                : "rgba(150,185,210,0.45)";
+            g.fillRect(xx * pw + 1.1, yy * ph + 1.1, pw - 2.2, ph - 2.2);
+          }
+        const tex = new THREE.CanvasTexture(c);
+        if (THREE.RepeatWrapping) {
+          tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        }
+        tex.repeat.set(1, Math.max(1, Math.round(h / 28)));
+        return new THREE.MeshStandardMaterial({
+          map: tex,
+          emissive: 0xffe6b0,
+          emissiveMap: tex,
+          emissiveIntensity: 0.14,
+          color: 0xcfe0ee,
+          metalness: 0.55,
+          roughness: 0.16,
+        });
+      }
+      function buildTower(x, z, w, d, h, i) {
+        const gm = glassTowerMat(w, h);
+        const body = new THREE.Mesh(boxGeo, gm);
+        body.scale.set(w, h, d);
+        body.position.set(x, h / 2, z);
+        body.matrixAutoUpdate = false;
+        body.updateMatrix();
+        exploreWorld.add(body);
+        const cap = new THREE.Mesh(boxGeo, gm);
+        cap.scale.set(w * 0.99, 4.5, d * 0.99);
+        cap.position.set(x, h + 1.4, z);
+        cap.rotation.z = 0.16;
+        cap.matrixAutoUpdate = false;
+        cap.updateMatrix();
+        exploreWorld.add(cap);
+        exAdd(w + 2.4, 3, d + 2.4, fmat(0x39424c), x, 1.5, z); // podium base
+        addBlob(x, z, Math.max(w, d) * 0.75);
+        const tX = WLS.x + 2 - x,
+          tZ = WLS.z - 2 - z,
+          L = Math.hypot(tX, tZ) || 1,
+          ex = x + (tX / L) * (w / 2 + 1.6),
+          ez = z + (tZ / L) * (d / 2 + 1.6);
+        exAdd(
+          3.6,
+          4,
+          0.3,
+          new THREE.MeshStandardMaterial({
+            color: 0x22314a,
+            emissive: 0x88ccff,
+            emissiveIntensity: 0.35,
+            transparent: true,
+            opacity: 0.6,
+            metalness: 0.5,
+            roughness: 0.2,
+          }),
+          ex,
+          2,
+          ez,
+        );
+        exInteractables.push({
+          x: ex,
+          z: ez,
+          r: 3.2,
+          label: "enter " + TOWER_NAMES[i] + " \ud83c\udfe2 (lobby + elevator)",
+          action: () => enterTower(i),
+        });
+      }
+      function buildWaterlineSquare() {
+        exParent = null;
+        const X = WLS.x,
+          Z = WLS.z;
+        exAdd(124, 0.5, 96, fmat(0x6a7078), X, 0.22, Z); // reclaimed waterfront pad
+        exAdd(
+          124,
+          0.06,
+          96,
+          new THREE.MeshStandardMaterial({
+            color: 0x8a9098,
+            roughness: 1,
+            transparent: true,
+            opacity: 0.3,
+          }),
+          X,
+          0.5,
+          Z,
+        );
+        for (let k = -6; k <= 6; k++)
+          exAdd(0.2, 1.1, 0.2, nycMetal, X + k * 9, 1.0, Z + 46); // waterfront railing posts
+        exAdd(120, 0.16, 0.3, nycMetal, X, 1.5, Z + 46);
+        const cx = X + 2,
+          cz = Z - 2; // central green courtyard
+        exAdd(34, 0.16, 30, fmat(0x3f7a3a), cx, 0.58, cz);
+        for (let i = -2; i <= 2; i++)
+          exAdd(3.4, 0.06, 26, fmat(0xbaa878), cx + i * 7, 0.66, cz);
+        for (let i = 0; i < 14; i++)
+          exTree(cx + rand(-15, 15), cz + rand(-13, 13), rand(0.8, 1.3));
+        exAdd(5, 0.7, 5, fmat(0xcfcfd8), cx, 0.85, cz);
+        exAdd(
+          4,
+          0.5,
+          4,
+          new THREE.MeshStandardMaterial({
+            color: 0x66c0e8,
+            emissive: 0x2a80a8,
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.9,
+          }),
+          cx,
+          1.25,
+          cz,
+        );
+        for (const b of [
+          [-14, -10],
+          [14, -10],
+          [-14, 10],
+          [14, 10],
+        ])
+          exAdd(3, 0.5, 1, fmat(0x5a4a3a), cx + b[0], 0.6, cz + b[1]);
+        TOWERS.forEach((t, i) =>
+          buildTower(X + t.x, Z + t.z, t.w, t.d, t.h, i),
+        );
+        exAdd(
+          30,
+          4,
+          1,
+          signMat("WATERLINE SQUARE", "#bfe3ff", 30, 4),
+          X,
+          8,
+          Z + 46.2,
+        );
+        for (let i = 0; i < 8; i++)
+          exPeople.push(mkExPerson(cx + rand(-16, 16), cz + rand(-14, 14)));
+      }
+      function enterTower(i) {
+        const t = TOWERS[i],
+          tX = WLS.x + 2 - (WLS.x + t.x),
+          tZ = WLS.z - 2 - (WLS.z + t.z),
+          L = Math.hypot(tX, tZ) || 1;
+        const sx = WLS.x + t.x + (tX / L) * (t.w / 2 + 2.4),
+          sz = WLS.z + t.z + (tZ / L) * (t.d / 2 + 2.4);
+        enterInterior(() => buildTowerLobby(i), {
+          mode: "explore",
+          x: sx,
+          z: sz,
+          yaw: Math.PI,
+          exitLabel: "exit to street",
+        });
+      }
+      function elevatorTo(i, dest) {
+        const ret = interiorReturn;
+        sfx("click");
+        showToast(
+          dest === "apartment"
+            ? "\ud83d\udec1 Going up\u2026"
+            : "\ud83d\udec1 Going down\u2026",
+          "#bfe3ff",
+        );
+        enterInterior(
+          dest === "apartment"
+            ? () => buildTowerApartment(i)
+            : () => buildTowerLobby(i),
+          ret,
+        );
+      }
+      function buildTowerLobby(i) {
+        const X = WLSO.x,
+          Z = WLSO.z,
+          W = 20,
+          D = 18,
+          wc = fmat(0xdfe6ee),
+          H = 6;
+        iFloor(X, Z, W, D, 0, fmat(0x9aa4ae));
+        iAdd(W, 0.3, D, fmat(0x2a2f36), X, H, Z);
+        iWall(X - W / 2, Z, 0.3, D, H, wc);
+        iWall(X + W / 2, Z, 0.3, D, H, wc);
+        iWall(X, Z + D / 2, W, 0.3, H, wc);
+        const glass = new THREE.MeshStandardMaterial({
+          color: 0xbfe0f4,
+          emissive: 0x2a6a88,
+          emissiveIntensity: 0.2,
+          metalness: 0.5,
+          roughness: 0.15,
+          transparent: true,
+          opacity: 0.45,
+        });
+        const door = 3,
+          seg = (W - door) / 2;
+        iAdd(seg, H, 0.2, glass, X - (W / 2 - seg / 2), H / 2, Z - D / 2);
+        iAdd(seg, H, 0.2, glass, X + (W / 2 - seg / 2), H / 2, Z - D / 2);
+        iSign(
+          X,
+          Z - D / 2 + 0.5,
+          TOWER_NAMES[i] + " LOBBY",
+          "#bfe3ff",
+          4.4,
+          13,
+        );
+        iAdd(5, 1.1, 1.4, fmat(0x4a3f36), X, 0.55, Z + 4);
+        iPerson(X, Z + 5.2, Math.PI); // reception + concierge
+        for (const sx of [-1, 1]) {
+          iAdd(3, 0.5, 1.4, fmat(0x556070), X + sx * 6, 0.25, Z - 2);
+          iAdd(3, 0.9, 0.4, fmat(0x556070), X + sx * 6, 0.65, Z - 2.6);
+        }
+        iAdd(2.2, 0.4, 2, fmat(0x333941), X, 0.2, Z - 2); // coffee table
+        iAdd(2.6, 4.4, 0.3, fmat(0x2a2f36), X + W / 2 - 2, 2.2, Z + D / 2 - 2);
+        iAdd(
+          2.1,
+          3.7,
+          0.2,
+          new THREE.MeshStandardMaterial({
+            color: 0x88ccff,
+            emissive: 0x4488cc,
+            emissiveIntensity: 0.45,
+            metalness: 0.6,
+            roughness: 0.2,
+          }),
+          X + W / 2 - 2,
+          1.85,
+          Z + D / 2 - 2.15,
+        ); // elevator doors
+        interiorPortals.push({
+          x: X + W / 2 - 2,
+          z: Z + D / 2 - 3.6,
+          r: 2.2,
+          label: "\ud83d\udec1 take the elevator up",
+          action: () => elevatorTo(i, "apartment"),
+        });
+        interiorPortals.push({
+          x: X,
+          z: Z - 2,
+          r: 2.6,
+          label: "wait / relax in the lobby",
+          action: () => {
+            sfx("click");
+            showToast(
+              "You settle into the lobby for a while\u2026 \u2615",
+              "#bfe3ff",
+            );
+          },
+        });
+        interiorPortals.push({
+          x: X,
+          z: Z - D / 2 - 0.6,
+          r: 2.6,
+          label: "exit to street",
+          action: () => exitInterior(),
+        });
+        return { x: X, z: Z - D / 2 + 2, y: 0, yaw: Math.PI };
+      }
+      function buildTowerApartment(i) {
+        const X = WLSA.x,
+          Z = WLSA.z,
+          W = 22,
+          D = 18,
+          wc = fmat(0xe8e0d0),
+          H = 5;
+        iFloor(X, Z, W, D, 0, fmat(0x8a6a4a));
+        iAdd(W, 0.3, D, fmat(0x2a241c), X, H, Z);
+        iWall(X - W / 2, Z, 0.3, D, H, wc);
+        iWall(X + W / 2, Z, 0.3, D, H, wc);
+        const view = new THREE.MeshStandardMaterial({
+          color: 0x2a4a6a,
+          emissive: 0xffb877,
+          emissiveIntensity: 0.5,
+          transparent: true,
+          opacity: 0.5,
+          metalness: 0.4,
+          roughness: 0.15,
+        });
+        iAdd(W, H, 0.2, view, X, H / 2, Z - D / 2);
+        iAdd(W, H, 0.2, view, X, H / 2, Z + D / 2); // floor-to-ceiling views
+        iSign(
+          X,
+          Z - D / 2 + 0.6,
+          TOWER_NAMES[i] + " \u2014 PENTHOUSE",
+          "#ffd27a",
+          4.2,
+          14,
+        );
+        iAdd(4, 0.5, 1.6, fmat(0x66707e), X - 6, 0.25, Z);
+        iAdd(4, 0.95, 0.4, fmat(0x66707e), X - 6, 0.62, Z + 0.8); // sofa
+        iAdd(0.2, 1.6, 3, fmat(0x1a1a1a), X - 9.6, 1.3, Z - 3); // tv
+        iAdd(4, 0.6, 5, fmat(0x8a4a5a), X + 7, 0.3, Z + 3); // bed
+        iAdd(6, 1.0, 1.2, fmat(0x5a5a62), X + 6, 0.5, Z - 5); // kitchen counter
+        iAdd(5, 0.05, 4, fmat(0x9a3a3a), X - 6, 0.06, Z); // rug
+        iPerson(X + 2, Z + 2, rand(0, 6.28));
+        iAdd(2.6, H, 0.3, fmat(0x2a2f36), X + W / 2 - 2, H / 2, Z + D / 2 - 2);
+        iAdd(
+          2.1,
+          3.6,
+          0.2,
+          new THREE.MeshStandardMaterial({
+            color: 0x88ccff,
+            emissive: 0x4488cc,
+            emissiveIntensity: 0.45,
+            metalness: 0.6,
+            roughness: 0.2,
+          }),
+          X + W / 2 - 2,
+          1.85,
+          Z + D / 2 - 2.15,
+        );
+        interiorPortals.push({
+          x: X + W / 2 - 2,
+          z: Z + D / 2 - 3.6,
+          r: 2.2,
+          label: "\ud83d\udec1 elevator down to lobby",
+          action: () => elevatorTo(i, "lobby"),
+        });
+        interiorPortals.push({
+          x: X,
+          z: Z - D / 2 - 0.6,
+          r: 2.6,
+          label: "exit to street",
+          action: () => exitInterior(),
+        });
+        return { x: X, z: Z - 4, y: 0, yaw: Math.PI };
+      }
+
       function buildCentralPark() {
         exParent = null;
         const X = CPARK.x,
@@ -9452,6 +9955,17 @@
           },
           get z() {
             return CPARK.z;
+          },
+        },
+        {
+          id: "waterline",
+          n: "Waterline Square",
+          c: "#bfe3ff",
+          get x() {
+            return WLS.x;
+          },
+          get z() {
+            return WLS.z;
           },
         },
       ];
