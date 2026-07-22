@@ -4,7 +4,6 @@ This is a game that was creating using Claude amnd prompting during tutoring ses
 
 # Bugs / Changes
 
-1. Make the American Dream Mall
 1. Make a hotkey for speed on the computer
 1. Fix the view of the plane
 1. If you change the car speed it also changes the plane speed
